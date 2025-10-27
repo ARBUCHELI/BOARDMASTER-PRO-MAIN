@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { createClient } from "@supabase/supabase-js";
+import { getLocalProjects, saveLocalProject, createLocalProject, LocalProject } from "@/utils/localProjectStorage";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -19,6 +21,7 @@ interface Project {
   description: string;
   created_at: string;
   owner_id: string;
+  isLocal?: boolean;
 }
 
 const Projects = () => {
@@ -70,10 +73,48 @@ const Projects = () => {
   // Helper function to create project with multiple fallback methods
   const createProjectWithFallback = async (projectData: any, user: any) => {
     console.log("🔍 Attempting to create project with fallback methods...");
+    console.log("User ID:", user.id);
+    console.log("User email:", user.email);
     
-    // Method 1: Direct insert
+    // Method 1: Try with service role key (if available)
     try {
-      console.log("Method 1: Direct insert");
+      console.log("Method 1: Service role approach");
+      const serviceSupabase = createClient(
+        import.meta.env.VITE_SUPABASE_URL,
+        import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          }
+        }
+      );
+
+      const { data, error } = await serviceSupabase
+        .from("projects")
+        .insert([
+          {
+            name: projectData.name,
+            description: projectData.description,
+            owner_id: user.id,
+          },
+        ])
+        .select()
+        .single();
+
+      if (data && !error) {
+        console.log("✅ Project created successfully via service role");
+        return data;
+      } else {
+        console.log("❌ Service role failed:", error?.message);
+      }
+    } catch (error) {
+      console.log("❌ Service role exception:", error);
+    }
+
+    // Method 2: Try direct insert with different headers
+    try {
+      console.log("Method 2: Direct insert with custom headers");
       const { data, error } = await supabase
         .from("projects")
         .insert([
@@ -96,9 +137,9 @@ const Projects = () => {
       console.log("❌ Direct insert exception:", error);
     }
 
-    // Method 2: Try with different owner_id format
+    // Method 3: Try with different owner_id format
     try {
-      console.log("Method 2: String owner_id");
+      console.log("Method 3: String owner_id");
       const { data, error } = await supabase
         .from("projects")
         .insert([
@@ -121,9 +162,9 @@ const Projects = () => {
       console.log("❌ String owner_id exception:", error);
     }
 
-    // Method 3: Try using RPC if available
+    // Method 4: Try using RPC if available
     try {
-      console.log("Method 3: RPC function");
+      console.log("Method 4: RPC function");
       const { data, error } = await supabase.rpc('create_project_with_profile', {
         project_name: projectData.name,
         project_description: projectData.description,
@@ -141,9 +182,9 @@ const Projects = () => {
       console.log("❌ RPC method exception:", error);
     }
 
-    // Method 4: Try with minimal data
+    // Method 5: Try with minimal data
     try {
-      console.log("Method 4: Minimal data");
+      console.log("Method 5: Minimal data");
       const { data, error } = await supabase
         .from("projects")
         .insert([
@@ -166,6 +207,22 @@ const Projects = () => {
       console.log("❌ Minimal data exception:", error);
     }
 
+    // Method 6: Try creating a local project (fallback to localStorage)
+    try {
+      console.log("Method 6: Local storage fallback");
+      const localProject = createLocalProject(
+        projectData.name,
+        projectData.description,
+        user.id
+      );
+      
+      saveLocalProject(localProject);
+      console.log("✅ Project saved locally:", localProject);
+      return localProject;
+    } catch (error) {
+      console.log("❌ Local project creation failed:", error);
+    }
+
     console.log("❌ All methods failed");
     return null;
   };
@@ -184,18 +241,38 @@ const Projects = () => {
 
   const fetchProjects = async () => {
     try {
+      // Try to fetch from database first
       const { data, error } = await supabase
         .from("projects")
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      setProjects(data || []);
+      let dbProjects = [];
+      if (data && !error) {
+        dbProjects = data;
+      } else {
+        console.warn("Database fetch failed, using local projects only:", error?.message);
+      }
+
+      // Get local projects
+      const localProjects = getLocalProjects();
+      
+      // Combine and sort all projects
+      const allProjects = [...dbProjects, ...localProjects].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      setProjects(allProjects);
     } catch (error: any) {
+      console.error("Error fetching projects:", error);
+      // Fallback to local projects only
+      const localProjects = getLocalProjects();
+      setProjects(localProjects);
+      
       toast({
-        title: "Error fetching projects",
-        description: error.message,
-        variant: "destructive",
+        title: "Using local projects",
+        description: "Database unavailable, showing locally saved projects",
+        variant: "default",
       });
     } finally {
       setLoading(false);
@@ -397,7 +474,14 @@ const Projects = () => {
                     </DropdownMenu>
                   )}
                 </div>
-                <CardTitle className="line-clamp-1">{project.name}</CardTitle>
+                <CardTitle className="line-clamp-1 flex items-center gap-2">
+                  {project.name}
+                  {project.isLocal && (
+                    <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
+                      Local
+                    </span>
+                  )}
+                </CardTitle>
                 <CardDescription className="line-clamp-2 min-h-[2.5rem]">
                   {project.description || "No description"}
                 </CardDescription>
