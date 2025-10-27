@@ -21,130 +21,6 @@ interface Project {
   owner_id: string;
 }
 
-// Helper function to ensure user profile exists
-const ensureUserProfile = async (user: any) => {
-  try {
-    // Check if profile exists
-    const { data: existingProfile, error: profileError } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("id", user.id)
-      .single();
-
-    if (existingProfile) {
-      return; // Profile exists, we're good
-    }
-
-    if (profileError && profileError.code === 'PGRST116') {
-      // Profile doesn't exist, try to create it
-      console.log("Creating user profile...");
-      const { error: createProfileError } = await supabase
-        .from("profiles")
-        .insert({
-          id: user.id,
-          email: user.email || "",
-          full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || "User",
-        });
-
-      if (createProfileError) {
-        console.warn("Could not create profile:", createProfileError.message);
-        // Don't throw error, continue anyway
-      }
-    }
-  } catch (error) {
-    console.warn("Profile check failed:", error);
-    // Don't throw error, continue anyway
-  }
-};
-
-// Helper function to create project with multiple fallback methods
-const createProjectWithFallback = async (projectData: any, user: any) => {
-  // Method 1: Direct insert
-  try {
-    const { data, error } = await supabase
-      .from("projects")
-      .insert([
-        {
-          name: projectData.name,
-          description: projectData.description,
-          owner_id: user.id,
-        },
-      ])
-      .select()
-      .single();
-
-    if (data && !error) {
-      console.log("Project created successfully via direct insert");
-      return data;
-    }
-  } catch (error) {
-    console.log("Direct insert failed:", error);
-  }
-
-  // Method 2: Try with different owner_id format
-  try {
-    const { data, error } = await supabase
-      .from("projects")
-      .insert([
-        {
-          name: projectData.name,
-          description: projectData.description,
-          owner_id: user.id.toString(),
-        },
-      ])
-      .select()
-      .single();
-
-    if (data && !error) {
-      console.log("Project created successfully with string owner_id");
-      return data;
-    }
-  } catch (error) {
-    console.log("String owner_id insert failed:", error);
-  }
-
-  // Method 3: Try using RPC if available
-  try {
-    const { data, error } = await supabase.rpc('create_project_with_profile', {
-      project_name: projectData.name,
-      project_description: projectData.description,
-      user_email: user.email,
-      user_full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || "User"
-    });
-
-    if (data && !error) {
-      console.log("Project created successfully via RPC");
-      return data;
-    }
-  } catch (error) {
-    console.log("RPC method failed:", error);
-  }
-
-  // Method 4: Try with minimal data
-  try {
-    const { data, error } = await supabase
-      .from("projects")
-      .insert([
-        {
-          name: projectData.name,
-          description: projectData.description || "",
-          owner_id: user.id,
-        },
-      ])
-      .select()
-      .single();
-
-    if (data && !error) {
-      console.log("Project created successfully with minimal data");
-      return data;
-    }
-  } catch (error) {
-    console.log("Minimal data insert failed:", error);
-  }
-
-  return null;
-};
-
 const Projects = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -154,6 +30,145 @@ const Projects = () => {
   const [creating, setCreating] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newProject, setNewProject] = useState({ name: "", description: "" });
+
+  // Helper function to ensure user profile exists
+  const ensureUserProfile = async (user: any) => {
+    try {
+      // Check if profile exists
+      const { data: existingProfile, error: profileError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", user.id)
+        .single();
+
+      if (existingProfile) {
+        return; // Profile exists, we're good
+      }
+
+      if (profileError && profileError.code === 'PGRST116') {
+        // Profile doesn't exist, try to create it
+        console.log("Creating user profile...");
+        const { error: createProfileError } = await supabase
+          .from("profiles")
+          .insert({
+            id: user.id,
+            email: user.email || "",
+            full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || "User",
+          });
+
+        if (createProfileError) {
+          console.warn("Could not create profile:", createProfileError.message);
+          // Don't throw error, continue anyway
+        }
+      }
+    } catch (error) {
+      console.warn("Profile check failed:", error);
+      // Don't throw error, continue anyway
+    }
+  };
+
+  // Helper function to create project with multiple fallback methods
+  const createProjectWithFallback = async (projectData: any, user: any) => {
+    console.log("🔍 Attempting to create project with fallback methods...");
+    
+    // Method 1: Direct insert
+    try {
+      console.log("Method 1: Direct insert");
+      const { data, error } = await supabase
+        .from("projects")
+        .insert([
+          {
+            name: projectData.name,
+            description: projectData.description,
+            owner_id: user.id,
+          },
+        ])
+        .select()
+        .single();
+
+      if (data && !error) {
+        console.log("✅ Project created successfully via direct insert");
+        return data;
+      } else {
+        console.log("❌ Direct insert failed:", error?.message);
+      }
+    } catch (error) {
+      console.log("❌ Direct insert exception:", error);
+    }
+
+    // Method 2: Try with different owner_id format
+    try {
+      console.log("Method 2: String owner_id");
+      const { data, error } = await supabase
+        .from("projects")
+        .insert([
+          {
+            name: projectData.name,
+            description: projectData.description,
+            owner_id: user.id.toString(),
+          },
+        ])
+        .select()
+        .single();
+
+      if (data && !error) {
+        console.log("✅ Project created successfully with string owner_id");
+        return data;
+      } else {
+        console.log("❌ String owner_id failed:", error?.message);
+      }
+    } catch (error) {
+      console.log("❌ String owner_id exception:", error);
+    }
+
+    // Method 3: Try using RPC if available
+    try {
+      console.log("Method 3: RPC function");
+      const { data, error } = await supabase.rpc('create_project_with_profile', {
+        project_name: projectData.name,
+        project_description: projectData.description,
+        user_email: user.email,
+        user_full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || "User"
+      });
+
+      if (data && !error) {
+        console.log("✅ Project created successfully via RPC");
+        return data;
+      } else {
+        console.log("❌ RPC method failed:", error?.message);
+      }
+    } catch (error) {
+      console.log("❌ RPC method exception:", error);
+    }
+
+    // Method 4: Try with minimal data
+    try {
+      console.log("Method 4: Minimal data");
+      const { data, error } = await supabase
+        .from("projects")
+        .insert([
+          {
+            name: projectData.name,
+            description: projectData.description || "",
+            owner_id: user.id,
+          },
+        ])
+        .select()
+        .single();
+
+      if (data && !error) {
+        console.log("✅ Project created successfully with minimal data");
+        return data;
+      } else {
+        console.log("❌ Minimal data failed:", error?.message);
+      }
+    } catch (error) {
+      console.log("❌ Minimal data exception:", error);
+    }
+
+    console.log("❌ All methods failed");
+    return null;
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
