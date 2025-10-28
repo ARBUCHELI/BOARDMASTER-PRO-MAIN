@@ -1,29 +1,11 @@
-import { Outlet, Link, useNavigate } from "react-router-dom";
+import { Outlet, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, FolderKanban, LogOut, CheckSquare, Shield } from "lucide-react";
+import { LayoutDashboard, FolderKanban, LogOut, CheckSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 
 const Layout = () => {
   const { signOut, user } = useAuth();
-  const navigate = useNavigate();
-  const [isOwner, setIsOwner] = useState(false);
-
-  useEffect(() => {
-    const checkRole = async () => {
-      if (!user) return;
-      const { data } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("role", "owner")
-        .maybeSingle();
-      setIsOwner(!!data);
-    };
-    checkRole();
-  }, [user]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -32,7 +14,7 @@ const Layout = () => {
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Projects", href: "/projects", icon: FolderKanban },
-    ...(isOwner ? [{ name: "Admin", href: "/admin", icon: Shield }] : []),
+    // Admin feature removed - no user role management needed for now
   ];
 
   return (
@@ -45,7 +27,7 @@ const Layout = () => {
             <div className="bg-primary rounded-lg p-2">
               <CheckSquare className="h-6 w-6 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold">TaskFlow</span>
+            <span className="text-xl font-bold">BoardMaster</span>
           </div>
 
           {/* Navigation */}
