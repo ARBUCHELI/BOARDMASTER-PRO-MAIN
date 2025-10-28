@@ -16,10 +16,10 @@ const createTaskSchema = z.object({
 
 const updateTaskSchema = z.object({
   title: z.string().min(1).optional(),
-  description: z.string().optional(),
+  description: z.string().optional().nullable(),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
   status: z.enum(['todo', 'in_progress', 'done']).optional(),
-  dueDate: z.string().optional(),
+  dueDate: z.string().optional().nullable(),
   boardId: z.string().uuid().optional(),
   position: z.number().int().min(0).optional(),
 });
@@ -180,6 +180,8 @@ router.put('/:id', async (req: AuthRequest, res) => {
     res.json(result.rows[0]);
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error('Task update validation error:', error.errors);
+      console.error('Request body:', req.body);
       return res.status(400).json({ error: error.errors });
     }
     console.error('Update task error:', error);
