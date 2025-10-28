@@ -61,13 +61,15 @@ const ProjectBoard = () => {
 
   const fetchProjectData = async () => {
     try {
-      const projectData = await api.getProject(id!);
+      const [projectData, boardsData, tasksData] = await Promise.all([
+        api.getProject(id!),
+        api.getBoards(id!),
+        api.getTasks(id!),
+      ]);
+
       setProject(projectData);
-      
-      // TODO: Implement boards and tasks API endpoints
-      // For now, show empty state
-      setBoards([]);
-      setTasks([]);
+      setBoards(boardsData);
+      setTasks(tasksData);
     } catch (error: any) {
       toast({
         title: "Error loading project",
@@ -80,31 +82,115 @@ const ProjectBoard = () => {
     }
   };
 
-  // Task management functions - TODO: Implement backend API endpoints
   const handleDragEnd = async (result: DropResult) => {
-    // TODO: Implement drag and drop API
+    const { destination, source, draggableId } = result;
+
+    if (!destination) return;
+    if (destination.droppableId === source.droppableId && destination.index === source.index) return;
+
+    const task = tasks.find((t) => t.id === draggableId);
+    if (!task) return;
+
+    // Optimistic update
+    const newTasks = Array.from(tasks);
+    const taskIndex = newTasks.findIndex((t) => t.id === draggableId);
+    newTasks.splice(taskIndex, 1);
+
+    const updatedTask = {
+      ...task,
+      board_id: destination.droppableId,
+      position: destination.index,
+    };
+
+    newTasks.splice(destination.index, 0, updatedTask);
+    setTasks(newTasks);
+
+    try {
+      await api.updateTask(draggableId, {
+        boardId: destination.droppableId,
+        position: destination.index,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error moving task",
+        description: error.message,
+        variant: "destructive",
+      });
+      fetchProjectData();
+    }
   };
 
   const handleAddTask = (boardId: string) => {
-    toast({
-      title: "Feature Coming Soon",
-      description: "Task management is being implemented!",
-    });
+    setSelectedBoardId(boardId);
+    setSelectedTask(null);
+    setDialogOpen(true);
   };
 
   const handleTaskClick = (task: Task) => {
-    toast({
-      title: "Feature Coming Soon",
-      description: "Task editing is being implemented!",
-    });
+    setSelectedTask(task);
+    setSelectedBoardId(task.board_id);
+    setDialogOpen(true);
   };
 
   const handleSaveTask = async (taskData: any) => {
-    // TODO: Implement task save API
+    if (!user) return;
+
+    try {
+      if (selectedTask) {
+        await api.updateTask(selectedTask.id, {
+          title: taskData.title,
+          description: taskData.description,
+          priority: taskData.priority,
+          dueDate: taskData.due_date?.toISOString() || null,
+          status: taskData.status,
+        });
+
+        toast({
+          title: "Task updated",
+          description: "Your task has been updated successfully.",
+        });
+      } else {
+        await api.createTask(
+          selectedBoardId,
+          taskData.title,
+          taskData.description,
+          taskData.priority
+        );
+
+        toast({
+          title: "Task created",
+          description: "Your new task has been added.",
+        });
+      }
+
+      setDialogOpen(false);
+      await fetchProjectData();
+    } catch (error: any) {
+      toast({
+        title: "Error saving task",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDeleteTask = async (taskId: string) => {
-    // TODO: Implement task delete API
+    try {
+      await api.deleteTask(taskId);
+
+      toast({
+        title: "Task deleted",
+        description: "The task has been removed.",
+      });
+
+      await fetchProjectData();
+    } catch (error: any) {
+      toast({
+        title: "Error deleting task",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {

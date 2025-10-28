@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { pool } from '../db/index.js';
 import { authenticate, AuthRequest } from '../middleware/auth.js';
+import { seedWelcomeProject } from '../db/seedWelcomeProject.js';
 
 const router = Router();
 
@@ -42,6 +43,14 @@ router.post('/register', async (req, res) => {
     );
 
     const user = result.rows[0];
+
+    // Create welcome project for new user
+    try {
+      await seedWelcomeProject(user.id);
+    } catch (error) {
+      console.error('Failed to create welcome project:', error);
+      // Continue even if welcome project creation fails
+    }
 
     // Generate JWT
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, {

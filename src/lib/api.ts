@@ -103,6 +103,49 @@ class ApiClient {
       method: 'DELETE',
     });
   }
+
+  // Boards
+  async getBoards(projectId: string) {
+    return this.request<any[]>(`/api/boards/project/${projectId}`);
+  }
+
+  async createBoard(projectId: string, name: string) {
+    return this.request<any>('/api/boards', {
+      method: 'POST',
+      body: JSON.stringify({ projectId, name }),
+    });
+  }
+
+  async deleteBoard(id: string) {
+    return this.request<{ message: string }>(`/api/boards/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Tasks
+  async getTasks(projectId: string) {
+    return this.request<any[]>(`/api/tasks/project/${projectId}`);
+  }
+
+  async createTask(boardId: string, title: string, description?: string, priority?: string) {
+    return this.request<any>('/api/tasks', {
+      method: 'POST',
+      body: JSON.stringify({ boardId, title, description, priority }),
+    });
+  }
+
+  async updateTask(id: string, data: any) {
+    return this.request<any>(`/api/tasks/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteTask(id: string) {
+    return this.request<{ message: string }>(`/api/tasks/${id}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 export const api = new ApiClient(API_BASE_URL);

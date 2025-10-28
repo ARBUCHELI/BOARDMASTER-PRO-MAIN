@@ -3,6 +3,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import projectRoutes from './routes/projects.js';
+import boardRoutes from './routes/boards.js';
+import taskRoutes from './routes/tasks.js';
 
 dotenv.config();
 
@@ -15,6 +17,8 @@ app.get('/health', (_req, res) => res.json({ ok: true }));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
+app.use('/api/boards', boardRoutes);
+app.use('/api/tasks', taskRoutes);
 
 const port = process.env.PORT || 3001;
 app.listen(port, () => {
