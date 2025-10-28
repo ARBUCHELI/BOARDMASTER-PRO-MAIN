@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { DragDropContext, DropResult } from "react-beautiful-dnd";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -61,171 +61,50 @@ const ProjectBoard = () => {
 
   const fetchProjectData = async () => {
     try {
-      const { data: projectData, error: projectError } = await supabase
-        .from("projects")
-        .select("*")
-        .eq("id", id)
-        .single();
-
-      if (projectError) throw projectError;
+      const projectData = await api.getProject(id!);
       setProject(projectData);
-
-      const { data: boardsData, error: boardsError } = await supabase
-        .from("boards")
-        .select("*")
-        .eq("project_id", id)
-        .order("position", { ascending: true });
-
-      if (boardsError) throw boardsError;
-      setBoards(boardsData || []);
-
-      const boardIds = boardsData?.map((b) => b.id) || [];
-      const { data: tasksData, error: tasksError } = await supabase
-        .from("tasks")
-        .select("*")
-        .in("board_id", boardIds)
-        .order("position", { ascending: true });
-
-      if (tasksError) throw tasksError;
-      setTasks(tasksData || []);
+      
+      // TODO: Implement boards and tasks API endpoints
+      // For now, show empty state
+      setBoards([]);
+      setTasks([]);
     } catch (error: any) {
       toast({
         title: "Error loading project",
         description: error.message,
         variant: "destructive",
       });
+      navigate("/projects");
     } finally {
       setLoading(false);
     }
   };
 
+  // Task management functions - TODO: Implement backend API endpoints
   const handleDragEnd = async (result: DropResult) => {
-    const { destination, source, draggableId } = result;
-
-    if (!destination) return;
-    if (destination.droppableId === source.droppableId && destination.index === source.index) return;
-
-    const task = tasks.find((t) => t.id === draggableId);
-    if (!task) return;
-
-    const newTasks = Array.from(tasks);
-    const taskIndex = newTasks.findIndex((t) => t.id === draggableId);
-    newTasks.splice(taskIndex, 1);
-
-    const updatedTask = {
-      ...task,
-      board_id: destination.droppableId,
-      position: destination.index,
-    };
-
-    newTasks.splice(destination.index, 0, updatedTask);
-    setTasks(newTasks);
-
-    try {
-      const { error } = await supabase
-        .from("tasks")
-        .update({
-          board_id: destination.droppableId,
-          position: destination.index,
-        })
-        .eq("id", draggableId);
-
-      if (error) throw error;
-    } catch (error: any) {
-      toast({
-        title: "Error moving task",
-        description: error.message,
-        variant: "destructive",
-      });
-      fetchProjectData();
-    }
+    // TODO: Implement drag and drop API
   };
 
   const handleAddTask = (boardId: string) => {
-    setSelectedBoardId(boardId);
-    setSelectedTask(null);
-    setDialogOpen(true);
+    toast({
+      title: "Feature Coming Soon",
+      description: "Task management is being implemented!",
+    });
   };
 
   const handleTaskClick = (task: Task) => {
-    setSelectedTask(task);
-    setSelectedBoardId(task.board_id);
-    setDialogOpen(true);
+    toast({
+      title: "Feature Coming Soon",
+      description: "Task editing is being implemented!",
+    });
   };
 
   const handleSaveTask = async (taskData: any) => {
-    if (!user) return;
-
-    try {
-      if (selectedTask) {
-        const { error } = await supabase
-          .from("tasks")
-          .update({
-            title: taskData.title,
-            description: taskData.description,
-            priority: taskData.priority,
-            due_date: taskData.due_date?.toISOString() || null,
-            status: taskData.status,
-          })
-          .eq("id", selectedTask.id);
-
-        if (error) throw error;
-
-        toast({
-          title: "Task updated",
-          description: "Your task has been updated successfully.",
-        });
-      } else {
-        const position = tasks.filter((t) => t.board_id === selectedBoardId).length;
-
-        const { error } = await supabase.from("tasks").insert({
-          title: taskData.title,
-          description: taskData.description,
-          priority: taskData.priority,
-          due_date: taskData.due_date?.toISOString() || null,
-          board_id: selectedBoardId,
-          position,
-          created_by: user.id,
-          status: "todo",
-        });
-
-        if (error) throw error;
-
-        toast({
-          title: "Task created",
-          description: "Your new task has been added.",
-        });
-      }
-
-      await fetchProjectData();
-    } catch (error: any) {
-      toast({
-        title: "Error saving task",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
+    // TODO: Implement task save API
   };
 
   const handleDeleteTask = async (taskId: string) => {
-    try {
-      const { error } = await supabase.from("tasks").delete().eq("id", taskId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Task deleted",
-        description: "The task has been removed.",
-      });
-
-      await fetchProjectData();
-    } catch (error: any) {
-      toast({
-        title: "Error deleting task",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
+    // TODO: Implement task delete API
   };
 
   if (loading) {

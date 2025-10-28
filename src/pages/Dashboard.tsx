@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import { createClient } from "@supabase/supabase-js";
+import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -31,196 +30,6 @@ const Dashboard = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newProject, setNewProject] = useState({ name: "", description: "" });
 
-  // Helper function to ensure user profile exists
-  const ensureUserProfile = async (user: any) => {
-    try {
-      const { data: existingProfile, error: profileError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("id", user.id)
-        .single();
-
-      if (existingProfile) {
-        return;
-      }
-
-      if (profileError && profileError.code === 'PGRST116') {
-        console.log("Creating user profile...");
-        const { error: createProfileError } = await supabase
-          .from("profiles")
-          .insert({
-            id: user.id,
-            email: user.email || "",
-            full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || "User",
-          });
-
-        if (createProfileError) {
-          console.warn("Could not create profile:", createProfileError.message);
-        }
-      }
-    } catch (error) {
-      console.warn("Profile check failed:", error);
-    }
-  };
-
-  // Helper function to create project with multiple fallback methods
-  const createProjectWithFallback = async (projectData: any, user: any) => {
-    console.log("🔍 Attempting to create project with fallback methods...");
-    console.log("User ID:", user.id);
-    console.log("User email:", user.email);
-    
-    // Method 1: Try with service role key (if available)
-    try {
-      console.log("Method 1: Service role approach");
-      const serviceSupabase = createClient(
-        import.meta.env.VITE_SUPABASE_URL,
-        import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        {
-          auth: {
-            autoRefreshToken: false,
-            persistSession: false
-          }
-        }
-      );
-
-      const { data, error } = await serviceSupabase
-        .from("projects")
-        .insert([
-          {
-            name: projectData.name,
-            description: projectData.description,
-            owner_id: user.id,
-          },
-        ])
-        .select()
-        .single();
-
-      if (data && !error) {
-        console.log("✅ Project created successfully via service role");
-        return data;
-      } else {
-        console.log("❌ Service role failed:", error?.message);
-      }
-    } catch (error) {
-      console.log("❌ Service role exception:", error);
-    }
-
-    // Method 2: Try direct insert with different headers
-    try {
-      console.log("Method 2: Direct insert with custom headers");
-      const { data, error } = await supabase
-        .from("projects")
-        .insert([
-          {
-            name: projectData.name,
-            description: projectData.description,
-            owner_id: user.id,
-          },
-        ])
-        .select()
-        .single();
-
-      if (data && !error) {
-        console.log("✅ Project created successfully via direct insert");
-        return data;
-      } else {
-        console.log("❌ Direct insert failed:", error?.message);
-      }
-    } catch (error) {
-      console.log("❌ Direct insert exception:", error);
-    }
-
-    // Method 3: Try with different owner_id format
-    try {
-      console.log("Method 3: String owner_id");
-      const { data, error } = await supabase
-        .from("projects")
-        .insert([
-          {
-            name: projectData.name,
-            description: projectData.description,
-            owner_id: user.id.toString(),
-          },
-        ])
-        .select()
-        .single();
-
-      if (data && !error) {
-        console.log("✅ Project created successfully with string owner_id");
-        return data;
-      } else {
-        console.log("❌ String owner_id failed:", error?.message);
-      }
-    } catch (error) {
-      console.log("❌ String owner_id exception:", error);
-    }
-
-    // Method 4: Try using RPC if available
-    try {
-      console.log("Method 4: RPC function");
-      const { data, error } = await supabase.rpc('create_project_with_profile', {
-        project_name: projectData.name,
-        project_description: projectData.description,
-        user_email: user.email,
-        user_full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || "User"
-      });
-
-      if (data && !error) {
-        console.log("✅ Project created successfully via RPC");
-        return data;
-      } else {
-        console.log("❌ RPC method failed:", error?.message);
-      }
-    } catch (error) {
-      console.log("❌ RPC method exception:", error);
-    }
-
-    // Method 5: Try with minimal data
-    try {
-      console.log("Method 5: Minimal data");
-      const { data, error } = await supabase
-        .from("projects")
-        .insert([
-          {
-            name: projectData.name,
-            description: projectData.description || "",
-            owner_id: user.id,
-          },
-        ])
-        .select()
-        .single();
-
-      if (data && !error) {
-        console.log("✅ Project created successfully with minimal data");
-        return data;
-      } else {
-        console.log("❌ Minimal data failed:", error?.message);
-      }
-    } catch (error) {
-      console.log("❌ Minimal data exception:", error);
-    }
-
-    // Method 6: Try creating a mock project (temporary workaround)
-    try {
-      console.log("Method 6: Mock project creation (temporary workaround)");
-      const mockProject = {
-        id: `mock-${Date.now()}`,
-        name: projectData.name,
-        description: projectData.description,
-        owner_id: user.id,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      
-      console.log("⚠️ Using mock project as workaround:", mockProject);
-      return mockProject;
-    } catch (error) {
-      console.log("❌ Mock project creation failed:", error);
-    }
-
-    console.log("❌ All methods failed");
-    return null;
-  };
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -236,16 +45,12 @@ const Dashboard = () => {
 
   const fetchProjects = async () => {
     try {
-      const { data, error } = await supabase
-        .from("projects")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setProjects(data || []);
+      const data = await api.getProjects();
+      setProjects(data);
     } catch (error: any) {
+      console.error("Error fetching projects:", error);
       toast({
-        title: "Error fetching projects",
+        title: "Error loading projects",
         description: error.message,
         variant: "destructive",
       });
@@ -260,39 +65,11 @@ const Dashboard = () => {
 
     setCreating(true);
     try {
-      // Verify we have a valid session
-      const { data: { session } } = await supabase.auth.getSession();
+      await api.createProject(newProject.name, newProject.description);
       
-      if (!session) {
-        throw new Error("No active session. Please log in again.");
-      }
-
-      // Step 1: Ensure user profile exists
-      await ensureUserProfile(session.user);
-
-      // Step 2: Try to create project with multiple fallback methods
-      const data = await createProjectWithFallback(newProject, session.user);
-
-      if (!data) {
-        throw new Error("Failed to create project. Please try again or contact support.");
-      }
-
-      // Create default boards
-      const defaultBoards = [
-        { name: "To Do", position: 0, project_id: data.id },
-        { name: "In Progress", position: 1, project_id: data.id },
-        { name: "Done", position: 2, project_id: data.id },
-      ];
-
-      const { error: boardsError } = await supabase
-        .from("boards")
-        .insert(defaultBoards);
-
-      if (boardsError) throw boardsError;
-
       toast({
         title: "Project created!",
-        description: "Your new project is ready.",
+        description: "Your new project is ready with default boards.",
       });
 
       setDialogOpen(false);
