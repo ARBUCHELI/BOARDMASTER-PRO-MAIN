@@ -134,6 +134,7 @@ async function seedDemoData() {
         `INSERT INTO users (email, password_hash, full_name, job_title, bio, avatar_url)
          VALUES ($1, $2, $3, $4, $5, $6)
          ON CONFLICT (email) DO UPDATE SET
+           password_hash = EXCLUDED.password_hash,
            full_name = EXCLUDED.full_name,
            job_title = EXCLUDED.job_title,
            bio = EXCLUDED.bio,
