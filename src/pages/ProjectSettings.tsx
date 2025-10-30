@@ -313,12 +313,11 @@ const ProjectSettings = () => {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="projectRole">Project Role (Optional)</Label>
-                        <Select value={newMemberProjectRole} onValueChange={setNewMemberProjectRole}>
+                        <Select value={newMemberProjectRole || undefined} onValueChange={setNewMemberProjectRole}>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a role" />
+                            <SelectValue placeholder="Select a role (optional)" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">None</SelectItem>
                             {roles.map((role) => (
                               <SelectItem key={role.id} value={role.id}>
                                 {role.name}
