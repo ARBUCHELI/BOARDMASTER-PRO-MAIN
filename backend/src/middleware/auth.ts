@@ -5,6 +5,7 @@ export interface AuthRequest extends Request {
   userId?: string;
   params: any;
   body: any;
+  headers: any;
 }
 
 export const authenticate = async (
