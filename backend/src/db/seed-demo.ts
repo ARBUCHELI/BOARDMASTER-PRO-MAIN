@@ -131,7 +131,7 @@ async function seedDemoData() {
       const hashedPassword = await bcrypt.hash(user.password, 10);
       
       const result = await client.query(
-        `INSERT INTO users (email, password, full_name, job_title, bio, avatar_url)
+        `INSERT INTO users (email, password_hash, full_name, job_title, bio, avatar_url)
          VALUES ($1, $2, $3, $4, $5, $6)
          ON CONFLICT (email) DO UPDATE SET
            full_name = EXCLUDED.full_name,
