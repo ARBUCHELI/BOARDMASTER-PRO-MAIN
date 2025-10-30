@@ -1,4 +1,4 @@
-import { Response, NextFunction } from 'express';
+import { Response, NextFunction, Request } from 'express';
 import { pool } from '../db/index.js';
 import { AuthRequest } from './auth.js';
 
@@ -18,6 +18,8 @@ export interface ProjectPermissions {
 }
 
 export interface PermissionRequest extends AuthRequest {
+  params: any;
+  body: any;
   projectId?: string;
   permissions?: ProjectPermissions;
 }
@@ -89,7 +91,9 @@ export const checkProjectAccess = async (
   }
 };
 
-export const requirePermission = (permission: keyof ProjectPermissions['projectRole'] | 'isOwner' | 'canEdit') => {
+type PermissionType = 'canManageMembers' | 'canManageRoles' | 'canAssignTasks' | 'canDeleteTasks' | 'canManageProject' | 'isOwner' | 'canEdit';
+
+export const requirePermission = (permission: PermissionType) => {
   return (req: PermissionRequest, res: Response, next: NextFunction) => {
     if (!req.permissions) {
       return res.status(403).json({ error: 'Permissions not loaded' });

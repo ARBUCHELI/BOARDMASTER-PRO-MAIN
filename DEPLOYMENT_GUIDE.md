@@ -91,7 +91,7 @@ Click **"Add Environment Variable"** for each:
 |-----|-------|-------|
 | `DATABASE_URL` | [Paste Internal Database URL from Step 2] | From your database |
 | `JWT_SECRET` | `your-super-secret-key-change-this-to-random-string` | Use strong random string |
-| `PORT` | `3001` | Backend port |
+| `PORT` | `3010` | Backend port |
 | `NODE_ENV` | `production` | Environment |
 
 **Important**: Click **"Generate"** button next to JWT_SECRET to get a secure random value!
