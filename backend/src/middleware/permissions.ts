@@ -106,8 +106,11 @@ export const requirePermission = (permission: PermissionType) => {
       return next();
     }
 
-    // Admin has most permissions
-    if (role === 'admin' && permission !== 'isOwner') {
+    // Admin has all permissions except isOwner
+    if (role === 'admin') {
+      if (permission === 'isOwner') {
+        return res.status(403).json({ error: 'Only project owner can perform this action' });
+      }
       return next();
     }
 
