@@ -42,6 +42,42 @@ router.post('/reset', async (req, res) => {
   }
 });
 
+// POST /api/seed/clean
+// Delete demo users
+router.post('/clean', async (req, res) => {
+  try {
+    // Check secret key
+    const providedSecret = req.headers['x-seed-secret'];
+    
+    if (providedSecret !== SEED_SECRET) {
+      return res.status(403).json({ error: 'Invalid seed secret' });
+    }
+
+    console.log('🧹 Cleaning demo users...');
+
+    // Delete demo users by email
+    const { stdout, stderr } = await execAsync(
+      `psql $DATABASE_URL -c "DELETE FROM users WHERE email IN ('sarah.mitchell@example.com', 'james.rodriguez@example.com', 'emily.zhang@example.com', 'michael.oconnor@example.com', 'priya.patel@example.com');"`
+    );
+    
+    console.log('Clean output:', stdout);
+    if (stderr) console.error('Clean errors:', stderr);
+
+    res.json({
+      success: true,
+      message: 'Demo users deleted successfully!',
+      output: stdout
+    });
+
+  } catch (error: any) {
+    console.error('Clean error:', error);
+    res.status(500).json({
+      error: 'Failed to clean demo users',
+      message: error.message
+    });
+  }
+});
+
 // POST /api/seed/demo
 // Trigger demo data seeding
 router.post('/demo', async (req, res) => {
