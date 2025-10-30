@@ -6,6 +6,7 @@ import projectRoutes from './routes/projects.js';
 import boardRoutes from './routes/boards.js';
 import taskRoutes from './routes/tasks.js';
 import teamRoutes from './routes/team.js';
+import seedRoutes from './routes/seed.js';
 
 dotenv.config();
 
@@ -21,6 +22,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/boards', boardRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/team', teamRoutes);
+app.use('/api/seed', seedRoutes);
 
 const port = process.env.PORT || 3001;
 app.listen(port, () => {
