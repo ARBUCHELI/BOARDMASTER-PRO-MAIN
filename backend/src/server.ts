@@ -12,7 +12,12 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors({ origin: '*'}));
+app.use(cors({
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
