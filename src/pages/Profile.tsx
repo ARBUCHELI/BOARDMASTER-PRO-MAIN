@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -8,19 +8,77 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, User, Mail, Briefcase, FileText, Save } from "lucide-react";
+import { Loader2, User, Mail, Briefcase, FileText, Save, Upload, X } from "lucide-react";
 
 const Profile = () => {
   const { user, refreshUser } = useAuth();
   const { toast } = useToast();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     fullName: user?.fullName || "",
     jobTitle: user?.jobTitle || "",
     bio: user?.bio || "",
     avatarUrl: user?.avatarUrl || "",
   });
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file (JPG, PNG, GIF, etc.)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please upload an image smaller than 2MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      // Convert to base64
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setFormData({ ...formData, avatarUrl: base64String });
+        setUploading(false);
+        toast({
+          title: "Image loaded",
+          description: "Click 'Save Changes' to update your profile picture",
+        });
+      };
+      reader.onerror = () => {
+        setUploading(false);
+        toast({
+          title: "Upload failed",
+          description: "Could not read the image file",
+          variant: "destructive",
+        });
+      };
+      reader.readAsDataURL(file);
+    } catch (error: any) {
+      setUploading(false);
+      toast({
+        title: "Upload failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleSave = async () => {
     if (!user) return;
@@ -92,24 +150,77 @@ const Profile = () => {
         <CardContent className="space-y-6">
           {/* Avatar Section */}
           <div className="flex items-center gap-6">
-            <Avatar className="h-24 w-24">
-              <AvatarImage src={formData.avatarUrl} alt={user.fullName} />
-              <AvatarFallback className="text-2xl">{getInitials()}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1">
-              <Label htmlFor="avatarUrl">Avatar URL</Label>
-              <Input
-                id="avatarUrl"
-                type="url"
-                placeholder="https://example.com/avatar.jpg"
-                value={formData.avatarUrl}
-                onChange={(e) => setFormData({ ...formData, avatarUrl: e.target.value })}
-                disabled={!editing}
-                className="mt-1"
-              />
-              <p className="text-sm text-muted-foreground mt-1">
-                Paste a link to your profile picture
-              </p>
+            <div className="relative">
+              <Avatar className="h-24 w-24">
+                <AvatarImage src={formData.avatarUrl} alt={user.fullName} />
+                <AvatarFallback className="text-2xl">{getInitials()}</AvatarFallback>
+              </Avatar>
+              {editing && formData.avatarUrl && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                  onClick={() => setFormData({ ...formData, avatarUrl: "" })}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+            <div className="flex-1 space-y-3">
+              {editing && (
+                <>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="w-full"
+                  >
+                    {uploading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Upload Image
+                      </>
+                    )}
+                  </Button>
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-card px-2 text-muted-foreground">Or</span>
+                    </div>
+                  </div>
+                </>
+              )}
+              <div>
+                <Label htmlFor="avatarUrl">Avatar URL</Label>
+                <Input
+                  id="avatarUrl"
+                  type="url"
+                  placeholder="https://example.com/avatar.jpg"
+                  value={formData.avatarUrl}
+                  onChange={(e) => setFormData({ ...formData, avatarUrl: e.target.value })}
+                  disabled={!editing}
+                  className="mt-1"
+                />
+                <p className="text-sm text-muted-foreground mt-1">
+                  {editing ? "Upload an image or paste a URL" : "Your profile picture"}
+                </p>
+              </div>
             </div>
           </div>
 
