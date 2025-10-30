@@ -8,6 +8,40 @@ const router = Router();
 // Secret key for seeding (change this!)
 const SEED_SECRET = process.env.SEED_SECRET || 'your-secret-key-change-me';
 
+// POST /api/seed/reset
+// Reset database (drop and recreate tables)
+router.post('/reset', async (req, res) => {
+  try {
+    // Check secret key
+    const providedSecret = req.headers['x-seed-secret'];
+    
+    if (providedSecret !== SEED_SECRET) {
+      return res.status(403).json({ error: 'Invalid seed secret' });
+    }
+
+    console.log('🗑️  Database reset triggered via API...');
+
+    // Run the migration to drop and recreate tables
+    const { stdout, stderr } = await execAsync('npm run db:migrate');
+    
+    console.log('Migration output:', stdout);
+    if (stderr) console.error('Migration errors:', stderr);
+
+    res.json({
+      success: true,
+      message: 'Database reset and migrated successfully!',
+      output: stdout
+    });
+
+  } catch (error: any) {
+    console.error('Reset error:', error);
+    res.status(500).json({
+      error: 'Failed to reset database',
+      message: error.message
+    });
+  }
+});
+
 // POST /api/seed/demo
 // Trigger demo data seeding
 router.post('/demo', async (req, res) => {
