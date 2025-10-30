@@ -124,7 +124,7 @@ router.post('/login', async (req, res) => {
 router.get('/me', authenticate, async (req: AuthRequest, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, email, full_name, avatar_url, created_at FROM users WHERE id = $1',
+      'SELECT id, email, full_name, avatar_url, bio, job_title, created_at FROM users WHERE id = $1',
       [req.userId]
     );
 
@@ -138,10 +138,80 @@ router.get('/me', authenticate, async (req: AuthRequest, res) => {
       email: user.email,
       fullName: user.full_name,
       avatarUrl: user.avatar_url,
+      bio: user.bio,
+      jobTitle: user.job_title,
       createdAt: user.created_at,
     });
   } catch (error) {
     console.error('Get user error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+const updateProfileSchema = z.object({
+  fullName: z.string().min(1).optional(),
+  avatarUrl: z.string().url().optional().nullable(),
+  bio: z.string().max(500).optional().nullable(),
+  jobTitle: z.string().max(100).optional().nullable(),
+});
+
+router.put('/profile', authenticate, async (req: AuthRequest, res) => {
+  try {
+    const data = updateProfileSchema.parse(req.body);
+
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramCount = 1;
+
+    if (data.fullName !== undefined) {
+      updates.push(`full_name = $${paramCount}`);
+      values.push(data.fullName);
+      paramCount++;
+    }
+
+    if (data.avatarUrl !== undefined) {
+      updates.push(`avatar_url = $${paramCount}`);
+      values.push(data.avatarUrl);
+      paramCount++;
+    }
+
+    if (data.bio !== undefined) {
+      updates.push(`bio = $${paramCount}`);
+      values.push(data.bio);
+      paramCount++;
+    }
+
+    if (data.jobTitle !== undefined) {
+      updates.push(`job_title = $${paramCount}`);
+      values.push(data.jobTitle);
+      paramCount++;
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    values.push(req.userId);
+    const result = await pool.query(
+      `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING id, email, full_name, avatar_url, bio, job_title, created_at`,
+      values
+    );
+
+    const user = result.rows[0];
+    res.json({
+      id: user.id,
+      email: user.email,
+      fullName: user.full_name,
+      avatarUrl: user.avatar_url,
+      bio: user.bio,
+      jobTitle: user.job_title,
+      createdAt: user.created_at,
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    console.error('Update profile error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

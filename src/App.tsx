@@ -10,6 +10,8 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/Projects";
 import ProjectBoard from "./pages/ProjectBoard";
+import ProjectSettings from "./pages/ProjectSettings";
+import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
 import Layout from "./components/Layout";
 import NotFound from "./pages/NotFound";
@@ -31,6 +33,8 @@ const App = () => (
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/project/:id" element={<ProjectBoard />} />
+              <Route path="/project/:id/settings" element={<ProjectSettings />} />
+              <Route path="/profile" element={<Profile />} />
               <Route path="/admin" element={<Admin />} />
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

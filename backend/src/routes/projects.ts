@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { pool } from '../db/index.js';
 import { authenticate, AuthRequest } from '../middleware/auth.js';
+import { seedDefaultRoles } from '../db/seedDefaultRoles.js';
 
 const router = Router();
 router.use(authenticate);
@@ -91,6 +92,14 @@ router.post('/', async (req: AuthRequest, res) => {
        ($1, 'Done', 2)`,
       [project.id]
     );
+
+    // Seed default project roles
+    try {
+      await seedDefaultRoles(project.id);
+    } catch (error) {
+      console.error('Failed to seed default roles:', error);
+      // Continue even if role seeding fails
+    }
 
     res.status(201).json(project);
   } catch (error) {

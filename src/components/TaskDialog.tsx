@@ -7,8 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
-import { CalendarIcon, Loader2, Trash2 } from "lucide-react";
+import { CalendarIcon, Loader2, Trash2, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Task {
@@ -18,6 +19,14 @@ interface Task {
   priority: "low" | "medium" | "high" | "urgent";
   due_date: Date | null;
   status: "todo" | "in_progress" | "done";
+  assigned_to?: string | null;
+}
+
+interface Member {
+  id: string;
+  full_name: string;
+  email: string;
+  avatar_url?: string;
 }
 
 interface TaskDialogProps {
@@ -27,15 +36,17 @@ interface TaskDialogProps {
   onSave: (task: Task) => Promise<void>;
   onDelete?: (taskId: string) => Promise<void>;
   boardId: string;
+  projectMembers?: Member[];
 }
 
-const TaskDialog = ({ open, onOpenChange, task, onSave, onDelete, boardId }: TaskDialogProps) => {
+const TaskDialog = ({ open, onOpenChange, task, onSave, onDelete, boardId, projectMembers = [] }: TaskDialogProps) => {
   const [formData, setFormData] = useState<Task>({
     title: "",
     description: "",
     priority: "medium",
     due_date: null,
     status: "todo",
+    assigned_to: null,
   });
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -53,6 +64,7 @@ const TaskDialog = ({ open, onOpenChange, task, onSave, onDelete, boardId }: Tas
         priority: "medium",
         due_date: null,
         status: "todo",
+        assigned_to: null,
       });
     }
   }, [task, open]);
@@ -112,6 +124,44 @@ const TaskDialog = ({ open, onOpenChange, task, onSave, onDelete, boardId }: Tas
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={4}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="assignee">
+                <User className="h-4 w-4 inline mr-2" />
+                Assign To
+              </Label>
+              <Select
+                value={formData.assigned_to || "unassigned"}
+                onValueChange={(value) => setFormData({ ...formData, assigned_to: value === "unassigned" ? null : value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select team member" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center">
+                        <User className="h-3 w-3" />
+                      </div>
+                      <span>Unassigned</span>
+                    </div>
+                  </SelectItem>
+                  {projectMembers.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={member.avatar_url} />
+                          <AvatarFallback className="text-xs">
+                            {member.full_name?.[0] || member.email[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span>{member.full_name || member.email}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

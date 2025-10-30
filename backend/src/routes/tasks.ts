@@ -12,6 +12,7 @@ const createTaskSchema = z.object({
   boardId: z.string().uuid(),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
   dueDate: z.string().optional(),
+  assignedTo: z.string().uuid().optional().nullable(),
 });
 
 const updateTaskSchema = z.object({
@@ -22,6 +23,7 @@ const updateTaskSchema = z.object({
   dueDate: z.string().optional().nullable(),
   boardId: z.string().uuid().optional(),
   position: z.number().int().min(0).optional(),
+  assignedTo: z.string().uuid().optional().nullable(),
 });
 
 // Get tasks for a project
@@ -45,8 +47,13 @@ router.get('/project/:projectId', async (req: AuthRequest, res) => {
     }
 
     const result = await pool.query(
-      `SELECT t.* FROM tasks t
+      `SELECT 
+        t.*,
+        u.full_name as assigned_to_name,
+        u.avatar_url as assigned_to_avatar
+       FROM tasks t
        JOIN boards b ON t.board_id = b.id
+       LEFT JOIN users u ON t.assigned_to = u.id
        WHERE b.project_id = $1
        ORDER BY t.position ASC`,
       [projectId]
@@ -62,7 +69,7 @@ router.get('/project/:projectId', async (req: AuthRequest, res) => {
 // Create task
 router.post('/', async (req: AuthRequest, res) => {
   try {
-    const { title, description, boardId, priority, dueDate } = createTaskSchema.parse(req.body);
+    const { title, description, boardId, priority, dueDate, assignedTo } = createTaskSchema.parse(req.body);
 
     // Verify user has access to board
     const boardCheck = await pool.query(
@@ -88,10 +95,10 @@ router.post('/', async (req: AuthRequest, res) => {
     const position = maxPos.rows[0].next_pos;
 
     const result = await pool.query(
-      `INSERT INTO tasks (title, description, board_id, priority, due_date, position, created_by, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'todo')
+      `INSERT INTO tasks (title, description, board_id, priority, due_date, position, created_by, assigned_to, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'todo')
        RETURNING *`,
-      [title, description || null, boardId, priority || 'medium', dueDate || null, position, req.userId]
+      [title, description || null, boardId, priority || 'medium', dueDate || null, position, req.userId, assignedTo || null]
     );
 
     res.status(201).json(result.rows[0]);
@@ -164,6 +171,11 @@ router.put('/:id', async (req: AuthRequest, res) => {
     if (data.position !== undefined) {
       updates.push(`position = $${paramCount}`);
       values.push(data.position);
+      paramCount++;
+    }
+    if (data.assignedTo !== undefined) {
+      updates.push(`assigned_to = $${paramCount}`);
+      values.push(data.assignedTo);
       paramCount++;
     }
 

@@ -71,6 +71,13 @@ class ApiClient {
     return this.request<any>('/api/auth/me');
   }
 
+  async updateProfile(data: { fullName?: string; avatarUrl?: string | null; bio?: string | null; jobTitle?: string | null }) {
+    return this.request<any>('/api/auth/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
   logout() {
     this.setToken(null);
   }
@@ -143,6 +150,56 @@ class ApiClient {
 
   async deleteTask(id: string) {
     return this.request<{ message: string }>(`/api/tasks/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Team Management
+  async getProjectMembers(projectId: string) {
+    return this.request<any[]>(`/api/team/projects/${projectId}/members`);
+  }
+
+  async addProjectMember(projectId: string, email: string, role: string, projectRoleId?: string) {
+    return this.request<any>(`/api/team/projects/${projectId}/members`, {
+      method: 'POST',
+      body: JSON.stringify({ email, role, projectRoleId }),
+    });
+  }
+
+  async updateProjectMember(projectId: string, memberId: string, data: { role?: string; projectRoleId?: string | null }) {
+    return this.request<any>(`/api/team/projects/${projectId}/members/${memberId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async removeProjectMember(projectId: string, memberId: string) {
+    return this.request<{ message: string }>(`/api/team/projects/${projectId}/members/${memberId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Project Roles
+  async getProjectRoles(projectId: string) {
+    return this.request<any[]>(`/api/team/projects/${projectId}/roles`);
+  }
+
+  async createProjectRole(projectId: string, data: any) {
+    return this.request<any>(`/api/team/projects/${projectId}/roles`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateProjectRole(projectId: string, roleId: string, data: any) {
+    return this.request<any>(`/api/team/projects/${projectId}/roles/${roleId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteProjectRole(projectId: string, roleId: string) {
+    return this.request<{ message: string }>(`/api/team/projects/${projectId}/roles/${roleId}`, {
       method: 'DELETE',
     });
   }

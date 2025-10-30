@@ -4,98 +4,163 @@ This file provides guidance to WARP (warp.dev) when working with code in this re
 
 ## Project Overview
 
-BoardMaster Pro is a Kanban-style project management application built with React, TypeScript, Vite, and Supabase. It's developed using the Lovable platform with shadcn/ui components.
+BoardMaster Pro is a full-stack Kanban-style project management application (similar to Jira/Trello) with a **dual architecture**: it uses both a **custom Express.js backend with PostgreSQL** AND has legacy **Supabase integration** code. The primary data flow is through the Express backend, while the Supabase client exists as a dummy implementation to prevent import errors.
 
 ## Essential Commands
 
-### Development
+### Frontend Development
 ```powershell
 npm i                    # Install dependencies
-npm run dev              # Start dev server on port 8080
+npm run dev              # Start dev server on port 8080 (not 5173)
 npm run build            # Production build
 npm run build:dev        # Development build
 npm run preview          # Preview production build
 npm run lint             # Run ESLint
 ```
 
+### Backend Development
+```powershell
+cd backend
+npm install              # Install backend dependencies
+npm run dev              # Start backend dev server with tsx watch (port 3001)
+npm run build            # Compile TypeScript to dist/
+npm start                # Run production build
+npm run db:migrate       # Run database migrations
+npm run db:seed          # Seed database with initial data
+```
+
+### Testing
+- **No test framework configured** - Check README or search codebase before assuming test commands
+- Backend tests not currently implemented
+- Frontend tests not currently implemented
+
 ## Architecture
 
-### Frontend Structure
-- **Framework**: React 18 + TypeScript + Vite
-- **Routing**: React Router v6 with protected routes
+### Dual Backend System
+**IMPORTANT**: This project has evolved from Supabase to a custom backend:
+1. **Primary Backend**: Express.js (TypeScript) + PostgreSQL
+   - JWT-based authentication (bcrypt for passwords)
+   - RESTful API on port 3001
+   - Database migrations in `backend/src/db/migrate.ts`
+2. **Legacy Supabase Code**: Dummy implementation in `src/integrations/supabase/client.ts`
+   - Exists only to prevent import errors
+   - DO NOT use for actual data operations
+   - Frontend uses `src/lib/api.ts` ApiClient instead
+
+### Frontend Stack
+- **Framework**: React 18 + TypeScript + Vite (SWC compiler)
+- **Routing**: React Router v6
 - **UI Components**: shadcn/ui with Radix UI primitives
-- **Styling**: Tailwind CSS with CSS variables
+- **Styling**: Tailwind CSS with @tailwindcss/typography
 - **State Management**: React Context for auth, TanStack Query for server state
 - **Drag & Drop**: react-beautiful-dnd for Kanban board
+- **Forms**: react-hook-form with zod validation
+- **Notifications**: sonner toast library
+- **Dev Port**: 8080 (configured in vite.config.ts)
 
-### Key Directories
-- `src/pages/` - Main application pages (Dashboard, Projects, ProjectBoard, Admin, Auth)
-- `src/components/` - Reusable components including shadcn/ui components in `ui/` subdirectory
-- `src/contexts/` - React Context providers (AuthContext)
-- `src/integrations/supabase/` - Auto-generated Supabase client and types
-- `src/hooks/` - Custom React hooks (use-toast, use-mobile)
-- `src/lib/` - Utility functions
-- `supabase/migrations/` - Database migration files
+### Backend Stack (Express)
+- **Framework**: Express.js with TypeScript
+- **Database**: PostgreSQL (via `pg` library)
+- **Auth**: JWT tokens (jsonwebtoken) + bcrypt
+- **Validation**: Zod schemas
+- **Dev Tool**: tsx for TypeScript execution with watch mode
+- **CORS**: Enabled for all origins (`cors({ origin: '*' })`)
 
-### Backend (Supabase)
-Database schema includes:
-- **profiles** - User profiles linked to auth.users
+### Project Structure
+```
+boardmaster-pro-main/
+├── backend/
+│   ├── src/
+│   │   ├── db/          # Database connection, migrations, seeding
+│   │   ├── middleware/  # JWT authentication middleware
+│   │   ├── routes/      # API routes (auth, projects, boards, tasks)
+│   │   └── server.ts    # Express app entry point
+│   └── package.json
+├── src/                 # React frontend
+│   ├── components/      # Reusable components + ui/ subdirectory (shadcn)
+│   ├── contexts/        # AuthContext (uses Express backend)
+│   ├── hooks/           # use-toast, use-mobile
+│   ├── integrations/    # Dummy Supabase client (legacy)
+│   ├── lib/             # api.ts (ApiClient for Express backend)
+│   ├── pages/           # Dashboard, Projects, ProjectBoard, Auth
+│   └── utils/           # Utility functions
+├── supabase/migrations/ # Legacy migrations (may not be used)
+└── docker-compose.yml   # PostgreSQL setup
+```
+
+### Database Schema (PostgreSQL)
+- **users** - User accounts (id, email, password hash, full_name)
 - **projects** - Project metadata with owner relationships
-- **project_members** - Many-to-many project membership with roles
-- **boards** - Kanban board columns within projects
-- **tasks** - Individual tasks with priority, status, assignment, and position
-- **comments** - Task comments
-- **user_roles** - System-wide role assignments
-
-Enum types: `app_role` (owner/member/viewer), `task_priority` (low/medium/high/urgent), `task_status` (todo/in_progress/done)
+- **boards** - Kanban board columns within projects (position-based ordering)
+- **tasks** - Individual tasks with priority, status, assignment, position
+- Migrations located in `backend/src/db/migrate.ts`
 
 ### Authentication Flow
-1. AuthContext wraps the application and manages session state
-2. Supabase Auth with localStorage persistence and auto-refresh
-3. Protected routes wrapped in Layout component
-4. User profiles are automatically created during registration
-5. Navigation automatically redirects based on auth state
+1. **Frontend**: AuthContext (`src/contexts/AuthContext.tsx`) manages JWT token in localStorage
+2. **API Client**: `src/lib/api.ts` attaches `Authorization: Bearer <token>` header
+3. **Backend**: JWT middleware validates token on protected routes
+4. **Registration/Login**: Returns JWT token + user data
+5. **Protected Routes**: Wrapped in Layout component, check auth state
 
-### Row Level Security (RLS)
-The application has comprehensive RLS policies:
-- Users can only access projects they own or are members of
-- Project owners have full CRUD permissions on their projects
-- Project members can view and create/update boards and tasks
-- Profile updates restricted to own profile
-
-**Known Issue**: If encountering RLS errors during project creation, the codebase includes fallback methods in `Projects.tsx` and `Dashboard.tsx` that try multiple insertion strategies.
+### API Endpoints
+- **Auth**: `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`
+- **Projects**: `GET /api/projects`, `POST /api/projects`, `PUT /api/projects/:id`, `DELETE /api/projects/:id`, `GET /api/projects/:id`
+- **Boards**: `GET /api/boards/project/:projectId`, `POST /api/boards`, `DELETE /api/boards/:id`
+- **Tasks**: `GET /api/tasks/project/:projectId`, `POST /api/tasks`, `PUT /api/tasks/:id`, `DELETE /api/tasks/:id`
 
 ## Import Aliases
 - `@/*` maps to `src/*` (configured in vite.config.ts and tsconfig.json)
-- Common imports: `@/components/ui/*`, `@/integrations/supabase/client`, `@/hooks/*`, `@/lib/*`
+- Common imports: `@/components/ui/*`, `@/lib/api`, `@/hooks/*`, `@/contexts/AuthContext`
 
 ## Environment Variables
-Required in `.env`:
-- `VITE_SUPABASE_URL` - Supabase project URL
-- `VITE_SUPABASE_PUBLISHABLE_KEY` - Supabase anon/public key
+
+### Frontend (`.env`)
+```env
+VITE_API_URL=http://localhost:3001
+```
+
+### Backend (`backend/.env`)
+```env
+PORT=3001
+DATABASE_URL=postgresql://boardmaster:boardmaster123@localhost:5432/boardmaster
+JWT_SECRET=your-secret-key-change-in-production
+NODE_ENV=development
+```
 
 ## TypeScript Configuration
-- Loose mode enabled: `noImplicitAny: false`, `strictNullChecks: false`
-- Project uses TypeScript references with separate configs for app and node environments
+- Loose mode: `noImplicitAny: false`, `strictNullChecks: false`
+- TypeScript references: separate configs for app (tsconfig.app.json) and node (tsconfig.node.json)
 - Skip lib check enabled for faster builds
 
 ## Development Workflow
-1. This project integrates with Lovable - changes pushed to Git are reflected in the Lovable editor
-2. When making database changes, create migration files in `supabase/migrations/`
-3. Supabase types are auto-generated in `src/integrations/supabase/types.ts`
-4. Always use the Supabase client from `@/integrations/supabase/client`
-5. Toast notifications via sonner are available globally for user feedback
+1. **Start PostgreSQL** (via Docker: `docker-compose up -d` or local installation)
+2. **Terminal 1 - Backend**: `cd backend && npm run dev` (port 3001)
+3. **Terminal 2 - Frontend**: `npm run dev` (port 8080)
+4. **Database changes**: Create migrations in `backend/src/db/migrate.ts` and run `npm run db:migrate`
+5. **API changes**: Update routes in `backend/src/routes/` and corresponding ApiClient methods in `src/lib/api.ts`
+6. **Toast notifications**: Use `useToast()` hook from `@/hooks/use-toast` for user feedback
 
 ## Component Patterns
 - Use shadcn/ui components from `@/components/ui/` for consistent UI
-- Forms use react-hook-form with zod validation
-- Dialogs and modals use Radix UI primitives
-- Always destructure auth context: `const { user, session, loading } = useAuth()`
-- Use `useToast()` hook for displaying notifications
+- Forms: react-hook-form with zod validation
+- Dialogs/modals: Radix UI primitives
+- Auth: `const { user, signIn, signOut, loading } = useAuth()`
+- API calls: `import { api } from '@/lib/api'; await api.getProjects()`
+- Notifications: `const { toast } = useToast(); toast({ title: "Success" })`
 
-## Database Queries
-- Always check for RLS errors and handle gracefully
-- Use typed queries via the generated Database type
-- Fetch patterns typically: `.from(table).select().eq(id, value).single()` or `.order().limit()`
-- For relationships, use Supabase's query builder with explicit joins
-- Task and board positions use integer-based ordering for drag-and-drop
+## Deployment (Render)
+- **Database**: PostgreSQL on Render (free tier: 256 MB, 90 days retention)
+- **Backend**: Web Service with build command `npm install && npm run build`, start `npm start`
+- **Frontend**: Static Site with build command `npm install && npm run build`, publish dir `dist`
+- See DEPLOYMENT.md for complete instructions
+- **Note**: Free tier backend spins down after 15 min inactivity
+
+## Known Issues & Solutions
+1. **RLS Errors**: Legacy issue from Supabase migration - see TROUBLESHOOTING.md and TEST_INSTRUCTIONS.md
+2. **Dual architecture**: Be aware that `src/integrations/supabase/` is dummy code
+3. **Port conflicts**: Frontend uses 8080, backend uses 3001 (not standard 5173/3000)
+
+## Color Palette
+- Primary (Purple): `hsl(266, 100%, 65%)`
+- Secondary (Teal): `hsl(174, 72%, 56%)`
+- Accent (Coral): `hsl(14, 90%, 65%)`

@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import { DragDropContext, DropResult } from "react-beautiful-dnd";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Settings } from "lucide-react";
 import BoardColumn from "@/components/BoardColumn";
 import TaskDialog from "@/components/TaskDialog";
 
@@ -46,6 +46,7 @@ const ProjectBoard = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedBoardId, setSelectedBoardId] = useState<string>("");
+  const [members, setMembers] = useState<any[]>([]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -61,15 +62,17 @@ const ProjectBoard = () => {
 
   const fetchProjectData = async () => {
     try {
-      const [projectData, boardsData, tasksData] = await Promise.all([
+      const [projectData, boardsData, tasksData, membersData] = await Promise.all([
         api.getProject(id!),
         api.getBoards(id!),
         api.getTasks(id!),
+        api.getProjectMembers(id!),
       ]);
 
       setProject(projectData);
       setBoards(boardsData);
       setTasks(tasksData);
+      setMembers(membersData);
     } catch (error: any) {
       toast({
         title: "Error loading project",
@@ -143,6 +146,7 @@ const ProjectBoard = () => {
           priority: taskData.priority,
           dueDate: taskData.due_date?.toISOString() || null,
           status: taskData.status,
+          assignedTo: taskData.assigned_to,
         });
 
         toast({
@@ -204,21 +208,30 @@ const ProjectBoard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       <div className="container mx-auto p-6 space-y-6 animate-fade-in">
-        <div className="flex items-center gap-4 bg-card/50 backdrop-blur-sm p-4 rounded-lg border shadow-sm">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/projects")}
-            className="hover:bg-primary/10"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold">{project?.name}</h1>
-            {project?.description && (
-              <p className="text-sm text-muted-foreground">{project.description}</p>
-            )}
+        <div className="flex items-center justify-between gap-4 bg-card/50 backdrop-blur-sm p-4 rounded-lg border shadow-sm">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/projects")}
+              className="hover:bg-primary/10"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">{project?.name}</h1>
+              {project?.description && (
+                <p className="text-sm text-muted-foreground">{project.description}</p>
+              )}
+            </div>
           </div>
+          <Button
+            variant="outline"
+            onClick={() => navigate(`/project/${id}/settings`)}
+          >
+            <Settings className="mr-2 h-4 w-4" />
+            Team & Settings
+          </Button>
         </div>
 
         <DragDropContext onDragEnd={handleDragEnd}>
@@ -248,12 +261,14 @@ const ProjectBoard = () => {
                 priority: selectedTask.priority,
                 due_date: selectedTask.due_date ? new Date(selectedTask.due_date) : null,
                 status: selectedTask.status,
+                assigned_to: selectedTask.assigned_to,
               }
             : undefined
         }
         onSave={handleSaveTask}
         onDelete={selectedTask ? handleDeleteTask : undefined}
         boardId={selectedBoardId}
+        projectMembers={members}
       />
     </div>
   );
