@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Loader2, Users, Shield, Trash2, UserPlus, Mail } from "lucide-react";
+import { ArrowLeft, Plus, Loader2, Users, Shield, Trash2, UserPlus, Mail, Pencil } from "lucide-react";
 
 interface Member {
   id: string;
@@ -57,6 +57,18 @@ const ProjectSettings = () => {
   const [newMemberRole, setNewMemberRole] = useState("member");
   const [newMemberProjectRole, setNewMemberProjectRole] = useState("");
   const [saving, setSaving] = useState(false);
+  const [editRoleDialogOpen, setEditRoleDialogOpen] = useState(false);
+  const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
+  const [editRole, setEditRole] = useState({
+    name: "",
+    description: "",
+    permissionLevel: "edit" as "full" | "edit" | "comment" | "view",
+    canManageMembers: false,
+    canManageRoles: false,
+    canAssignTasks: false,
+    canDeleteTasks: false,
+    canManageProject: false,
+  });
 
   const [newRole, setNewRole] = useState({
     name: "",
@@ -200,6 +212,55 @@ const ProjectSettings = () => {
         description: error.message,
         variant: "destructive",
       });
+    }
+  };
+
+  const handleOpenEditRole = (role: any) => {
+    setEditingRoleId(role.id);
+    setEditRole({
+      name: role.name || "",
+      description: role.description || "",
+      permissionLevel: (role.permission_level as any) || "edit",
+      canManageMembers: !!role.can_manage_members,
+      canManageRoles: !!role.can_manage_roles,
+      canAssignTasks: !!role.can_assign_tasks,
+      canDeleteTasks: !!role.can_delete_tasks,
+      canManageProject: !!role.can_manage_project,
+    });
+    setEditRoleDialogOpen(true);
+  };
+
+  const handleUpdateRole = async () => {
+    if (!editingRoleId) return;
+    setSaving(true);
+    try {
+      await api.updateProjectRole(id!, editingRoleId, {
+        name: editRole.name,
+        description: editRole.description,
+        permissionLevel: editRole.permissionLevel,
+        canManageMembers: editRole.canManageMembers,
+        canManageRoles: editRole.canManageRoles,
+        canAssignTasks: editRole.canAssignTasks,
+        canDeleteTasks: editRole.canDeleteTasks,
+        canManageProject: editRole.canManageProject,
+      });
+
+      toast({
+        title: "Role updated",
+        description: `${editRole.name} has been updated.`,
+      });
+
+      setEditRoleDialogOpen(false);
+      setEditingRoleId(null);
+      fetchData();
+    } catch (error: any) {
+      toast({
+        title: "Error updating role",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -563,6 +624,14 @@ const ProjectSettings = () => {
                           <Button
                             variant="ghost"
                             size="icon"
+                            onClick={() => handleOpenEditRole(role)}
+                            aria-label="Edit role"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => handleDeleteRole(role.id)}
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
@@ -592,6 +661,118 @@ const ProjectSettings = () => {
               </div>
             </CardContent>
           </Card>
+          {/* Edit Role Dialog */}
+          <Dialog open={editRoleDialogOpen} onOpenChange={setEditRoleDialogOpen}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Edit Role</DialogTitle>
+                <DialogDescription>Update the role name, description, and permissions.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="editRoleName">Role Name</Label>
+                  <Input
+                    id="editRoleName"
+                    placeholder="e.g., Scrum Master, Frontend Developer"
+                    value={editRole.name}
+                    onChange={(e) => setEditRole({ ...editRole, name: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="editRoleDescription">Description</Label>
+                  <Textarea
+                    id="editRoleDescription"
+                    placeholder="Describe this role's responsibilities"
+                    value={editRole.description}
+                    onChange={(e) => setEditRole({ ...editRole, description: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="editPermissionLevel">Permission Level</Label>
+                  <Select
+                    value={editRole.permissionLevel}
+                    onValueChange={(value: any) => setEditRole({ ...editRole, permissionLevel: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="full">Full Access</SelectItem>
+                      <SelectItem value="edit">Edit</SelectItem>
+                      <SelectItem value="comment">Comment Only</SelectItem>
+                      <SelectItem value="view">View Only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-3 pt-2">
+                  <Label>Specific Permissions</Label>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium">Manage Team Members</div>
+                        <div className="text-sm text-muted-foreground">Add, remove, and edit team members</div>
+                      </div>
+                      <Switch
+                        checked={editRole.canManageMembers}
+                        onCheckedChange={(checked) => setEditRole({ ...editRole, canManageMembers: checked })}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium">Manage Roles</div>
+                        <div className="text-sm text-muted-foreground">Create, edit, and delete custom roles</div>
+                      </div>
+                      <Switch
+                        checked={editRole.canManageRoles}
+                        onCheckedChange={(checked) => setEditRole({ ...editRole, canManageRoles: checked })}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium">Assign Tasks</div>
+                        <div className="text-sm text-muted-foreground">Assign tasks to team members</div>
+                      </div>
+                      <Switch
+                        checked={editRole.canAssignTasks}
+                        onCheckedChange={(checked) => setEditRole({ ...editRole, canAssignTasks: checked })}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium">Delete Tasks</div>
+                        <div className="text-sm text-muted-foreground">Remove tasks from the project</div>
+                      </div>
+                      <Switch
+                        checked={editRole.canDeleteTasks}
+                        onCheckedChange={(checked) => setEditRole({ ...editRole, canDeleteTasks: checked })}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium">Manage Project</div>
+                        <div className="text-sm text-muted-foreground">Edit project details and settings</div>
+                      </div>
+                      <Switch
+                        checked={editRole.canManageProject}
+                        onCheckedChange={(checked) => setEditRole({ ...editRole, canManageProject: checked })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={handleUpdateRole} disabled={saving || !editingRoleId}>
+                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Save Changes
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
       </Tabs>
     </div>
