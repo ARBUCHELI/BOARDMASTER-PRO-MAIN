@@ -30,11 +30,16 @@ const Register = () => {
     const { error } = await signUp(email, password, fullName);
 
     if (error) {
+      const message = String(error.message || "");
+      const isExisting = message.toLowerCase().includes("already exists");
       toast({
         title: "Error creating account",
-        description: error.message,
+        description: isExisting ? "User already exists. Please sign in instead." : message,
         variant: "destructive",
       });
+      if (isExisting) {
+        navigate("/login");
+      }
     } else {
       toast({
         title: "Account created!",
