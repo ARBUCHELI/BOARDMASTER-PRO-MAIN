@@ -3,12 +3,16 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { LayoutDashboard, FolderKanban, LogOut, CheckSquare, User, ChevronDown } from "lucide-react";
+import { LayoutDashboard, FolderKanban, LogOut, CheckSquare, User, ChevronDown, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import * as React from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Layout = () => {
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -34,11 +38,30 @@ const Layout = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Mobile top bar */}
+      <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-border md:hidden sticky top-0 bg-background z-40">
+        <div className="flex items-center gap-2">
+          <div className="bg-primary rounded-lg p-2">
+            <CheckSquare className="h-5 w-5 text-primary-foreground" />
+          </div>
+          <span className="text-lg font-bold">TaskFlow</span>
+        </div>
+        <Button variant="ghost" size="icon" onClick={() => setSidebarOpen((v) => !v)} aria-label="Toggle menu">
+          {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </Button>
+      </div>
+
       {/* Sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border">
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border transition-transform duration-200 ease-in-out",
+          "md:translate-x-0",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+        )}
+      >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center gap-2 px-6 py-6 border-b border-border">
+          <div className="hidden md:flex items-center gap-2 px-6 py-6 border-b border-border">
             <div className="bg-primary rounded-lg p-2">
               <CheckSquare className="h-6 w-6 text-primary-foreground" />
             </div>
@@ -67,7 +90,8 @@ const Layout = () => {
             })}
           </nav>
 
-          {/* User section */}
+          {/* User section */
+          }
           <div className="p-4 border-t border-border">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -118,9 +142,17 @@ const Layout = () => {
         </div>
       </aside>
 
+      {/* Backdrop for mobile sidebar */}
+      {isMobile && sidebarOpen ? (
+        <div
+          className="fixed inset-0 bg-black/40 z-40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      ) : null}
+
       {/* Main content */}
-      <div className="pl-64">
-        <main className="p-8">
+      <div className="md:pl-64">
+        <main className="p-4 sm:p-6 md:p-8">
           <Outlet />
         </main>
       </div>

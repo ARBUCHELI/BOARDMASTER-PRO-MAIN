@@ -30,18 +30,18 @@ const Index = () => {
             and ship faster with TaskFlow's intuitive Kanban boards.
           </p>
 
-          <div className="flex gap-4 justify-center pt-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center pt-4">
             {user ? (
-              <Button size="lg" onClick={() => navigate("/dashboard")} className="shadow-lg">
+              <Button size="lg" onClick={() => navigate("/dashboard")} className="shadow-lg w-full sm:w-auto">
                 Go to Dashboard
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             ) : (
               <>
-                <Button size="lg" onClick={() => navigate("/register")} className="shadow-lg">
+                <Button size="lg" onClick={() => navigate("/register")} className="shadow-lg w-full sm:w-auto">
                   Get Started Free
                 </Button>
-                <Button size="lg" variant="outline" onClick={() => navigate("/login")}>
+                <Button size="lg" variant="outline" onClick={() => navigate("/login")} className="w-full sm:w-auto">
                   Sign In
                 </Button>
               </>
