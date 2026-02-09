@@ -94,26 +94,32 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          bio: string | null
           created_at: string | null
           email: string
           full_name: string | null
           id: string
+          job_title: string | null
           updated_at: string | null
         }
         Insert: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string | null
           email: string
           full_name?: string | null
           id: string
+          job_title?: string | null
           updated_at?: string | null
         }
         Update: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string | null
           email?: string
           full_name?: string | null
           id?: string
+          job_title?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -123,6 +129,7 @@ export type Database = {
           created_at: string | null
           id: string
           project_id: string
+          project_role_id: string | null
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
@@ -130,6 +137,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           project_id: string
+          project_role_id?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
@@ -137,6 +145,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           project_id?: string
+          project_role_id?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
@@ -149,10 +158,70 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "project_members_project_role_id_fkey"
+            columns: ["project_role_id"]
+            isOneToOne: false
+            referencedRelation: "project_roles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "project_members_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_roles: {
+        Row: {
+          can_assign_tasks: boolean
+          can_delete_tasks: boolean
+          can_manage_members: boolean
+          can_manage_project: boolean
+          can_manage_roles: boolean
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          permission_level: Database["public"]["Enums"]["permission_level"]
+          project_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          can_assign_tasks?: boolean
+          can_delete_tasks?: boolean
+          can_manage_members?: boolean
+          can_manage_project?: boolean
+          can_manage_roles?: boolean
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          permission_level?: Database["public"]["Enums"]["permission_level"]
+          project_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          can_assign_tasks?: boolean
+          can_delete_tasks?: boolean
+          can_manage_members?: boolean
+          can_manage_project?: boolean
+          can_manage_roles?: boolean
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          permission_level?: Database["public"]["Enums"]["permission_level"]
+          project_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_roles_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -314,7 +383,8 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "owner" | "member" | "viewer"
+      app_role: "owner" | "admin" | "member" | "viewer"
+      permission_level: "full" | "edit" | "comment" | "view"
       task_priority: "low" | "medium" | "high" | "urgent"
       task_status: "todo" | "in_progress" | "done"
     }
