@@ -70,11 +70,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
-          const userData = await fetchProfile(session.user);
-          setUser(userData);
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
+        try {
+          if (event === 'SIGNED_IN' && session?.user) {
+            const userData = await fetchProfile(session.user);
+            setUser(userData);
+          } else if (event === 'SIGNED_OUT') {
+            setUser(null);
+          }
+        } catch (error) {
+          console.error('Auth state change error:', error);
         }
       }
     );
@@ -86,11 +90,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
-      const { user: userData } = await api.register(email, password, fullName);
-      if (userData) {
-        setUser(userData);
-        navigate("/dashboard");
-      }
+      // Just trigger the signup - onAuthStateChange will handle setting user state
+      // and Register.tsx useEffect will handle navigation
+      await api.register(email, password, fullName);
       return { error: null };
     } catch (error: any) {
       return { error: { message: error.message } };
@@ -99,9 +101,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { user: userData } = await api.login(email, password);
-      setUser(userData);
-      navigate("/dashboard");
+      // Just trigger the login - onAuthStateChange will handle setting user state
+      // and Login.tsx useEffect will handle navigation
+      await api.login(email, password);
       return { error: null };
     } catch (error: any) {
       return { error: { message: error.message } };

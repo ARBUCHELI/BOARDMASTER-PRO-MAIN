@@ -45,7 +45,7 @@ const Register = () => {
         title: "Account created!",
         description: "Welcome to TaskFlow. Let's get started!",
       });
-      navigate("/dashboard");
+      // Navigation handled by useEffect when user state updates
     }
 
     setLoading(false);
