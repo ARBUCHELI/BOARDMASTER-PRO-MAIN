@@ -43,7 +43,7 @@ class SupabaseApiClient {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
     
-    // Use direct fetch to bypass potential Supabase client issues
+    // Use direct fetch to bypass Supabase client issues
     const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
       method: 'POST',
       headers: {
@@ -59,18 +59,20 @@ class SupabaseApiClient {
       throw new Error(authData.error_description || authData.msg || 'Login failed');
     }
     
-    // Set the session in Supabase client
-    await supabase.auth.setSession({
-      access_token: authData.access_token,
-      refresh_token: authData.refresh_token,
+    // Store tokens in localStorage for session persistence
+    localStorage.setItem('supabase_access_token', authData.access_token);
+    localStorage.setItem('supabase_refresh_token', authData.refresh_token);
+    
+    // Get profile using direct fetch with the token
+    const profileResponse = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${authData.user.id}&select=*`, {
+      headers: {
+        'apikey': supabaseAnonKey,
+        'Authorization': `Bearer ${authData.access_token}`,
+      },
     });
     
-    // Get profile data
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', authData.user.id)
-      .single();
+    const profiles = await profileResponse.json();
+    const profile = profiles?.[0];
     
     return {
       user: {
