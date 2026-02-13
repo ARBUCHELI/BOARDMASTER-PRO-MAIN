@@ -40,47 +40,49 @@ class SupabaseApiClient {
   }
 
   async login(email: string, password: string) {
-    console.log('[API] login called');
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
     
-    // Add timeout to detect hanging promises
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Login timeout - Supabase client hung')), 10000);
+    // Use direct fetch to bypass potential Supabase client issues
+    const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': supabaseAnonKey,
+      },
+      body: JSON.stringify({ email, password }),
     });
     
-    const loginPromise = supabase.auth.signInWithPassword({
-      email,
-      password,
+    const authData = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(authData.error_description || authData.msg || 'Login failed');
+    }
+    
+    // Set the session in Supabase client
+    await supabase.auth.setSession({
+      access_token: authData.access_token,
+      refresh_token: authData.refresh_token,
     });
-    
-    console.log('[API] Calling signInWithPassword...');
-    const { data, error } = await Promise.race([loginPromise, timeoutPromise]) as any;
-    
-    console.log('[API] signInWithPassword result:', { data, error });
-    if (error) throw new Error(error.message);
     
     // Get profile data
-    console.log('[API] Fetching profile for user:', data.user.id);
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', data.user.id)
+      .eq('id', authData.user.id)
       .single();
     
-    console.log('[API] Profile result:', { profile, profileError });
-    
-    const result = {
+    return {
       user: {
-        id: data.user.id,
-        email: data.user.email,
+        id: authData.user.id,
+        email: authData.user.email,
         fullName: profile?.full_name,
         avatarUrl: profile?.avatar_url,
         bio: profile?.bio,
         jobTitle: profile?.job_title,
       },
-      token: data.session?.access_token
+      token: authData.access_token
     };
-    console.log('[API] Returning:', result);
-    return result;
   }
 
   async getMe() {
