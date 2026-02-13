@@ -90,9 +90,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
-      // Just trigger the signup - onAuthStateChange will handle setting user state
-      // and Register.tsx useEffect will handle navigation
-      await api.register(email, password, fullName);
+      const { user: userData } = await api.register(email, password, fullName);
+      if (userData) {
+        setUser(userData);
+      }
       return { error: null };
     } catch (error: any) {
       return { error: { message: error.message } };
@@ -101,9 +102,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      // Just trigger the login - onAuthStateChange will handle setting user state
-      // and Login.tsx useEffect will handle navigation
-      await api.login(email, password);
+      const { user: userData } = await api.login(email, password);
+      if (userData) {
+        setUser(userData);
+      }
       return { error: null };
     } catch (error: any) {
       return { error: { message: error.message } };
