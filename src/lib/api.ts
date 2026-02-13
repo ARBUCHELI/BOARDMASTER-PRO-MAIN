@@ -40,21 +40,26 @@ class SupabaseApiClient {
   }
 
   async login(email: string, password: string) {
+    console.log('[API] login called');
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     
+    console.log('[API] signInWithPassword result:', { data, error });
     if (error) throw new Error(error.message);
     
     // Get profile data
-    const { data: profile } = await supabase
+    console.log('[API] Fetching profile for user:', data.user.id);
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', data.user.id)
       .single();
     
-    return {
+    console.log('[API] Profile result:', { profile, profileError });
+    
+    const result = {
       user: {
         id: data.user.id,
         email: data.user.email,
@@ -65,6 +70,8 @@ class SupabaseApiClient {
       },
       token: data.session?.access_token
     };
+    console.log('[API] Returning:', result);
+    return result;
   }
 
   async getMe() {

@@ -102,12 +102,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { user: userData } = await api.login(email, password);
-      if (userData) {
-        setUser(userData);
+      console.log('[Auth] signIn called');
+      const response = await api.login(email, password);
+      console.log('[Auth] api.login response:', response);
+      if (response?.user) {
+        console.log('[Auth] Setting user:', response.user);
+        setUser(response.user);
+      } else {
+        console.log('[Auth] No user in response');
       }
       return { error: null };
     } catch (error: any) {
+      console.error('[Auth] signIn error:', error);
       return { error: { message: error.message } };
     }
   };

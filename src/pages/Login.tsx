@@ -17,7 +17,9 @@ const Login = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log('[Login] useEffect - user:', user);
     if (user) {
+      console.log('[Login] User detected, navigating to dashboard');
       navigate("/dashboard");
     }
   }, [user, navigate]);
