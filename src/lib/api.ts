@@ -41,10 +41,19 @@ class SupabaseApiClient {
 
   async login(email: string, password: string) {
     console.log('[API] login called');
-    const { data, error } = await supabase.auth.signInWithPassword({
+    
+    // Add timeout to detect hanging promises
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Login timeout - Supabase client hung')), 10000);
+    });
+    
+    const loginPromise = supabase.auth.signInWithPassword({
       email,
       password,
     });
+    
+    console.log('[API] Calling signInWithPassword...');
+    const { data, error } = await Promise.race([loginPromise, timeoutPromise]) as any;
     
     console.log('[API] signInWithPassword result:', { data, error });
     if (error) throw new Error(error.message);
