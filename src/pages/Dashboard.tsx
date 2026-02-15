@@ -16,8 +16,9 @@ interface Project {
   id: string;
   name: string;
   description: string;
-  created_at: string;
-  owner_id: string;
+  createdAt: string;
+  ownerId: string;
+  memberCount?: number;
 }
 
 const Dashboard = () => {
@@ -192,7 +193,7 @@ const Dashboard = () => {
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
-                    <span>{format(new Date(project.created_at), "MMM d, yyyy")}</span>
+                    <span>{format(new Date(project.createdAt), "MMM d, yyyy")}</span>
                   </div>
                 </div>
               </CardContent>

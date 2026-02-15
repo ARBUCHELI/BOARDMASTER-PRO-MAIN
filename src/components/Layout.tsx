@@ -9,14 +9,25 @@ import * as React from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const Layout = () => {
-  const { signOut, user } = useAuth();
+  const { signOut, user, loading } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
+  React.useEffect(() => {
+    if (!loading && !user) {
+      navigate("/login");
+    }
+  }, [user, loading, navigate]);
+
   const handleSignOut = async () => {
     await signOut();
   };
+
+  // Show nothing while checking auth or if not authenticated
+  if (loading || !user) {
+    return null;
+  }
 
   const getInitials = () => {
     if (user?.fullName) {

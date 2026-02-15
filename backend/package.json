@@ -5,13 +5,15 @@
   "main": "dist/server.js",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "build": "tsc",
+    "dev": "npx tsx watch src/server.ts",
+    "build": "npx tsc && npm run copy-schema",
+    "copy-schema": "node -e \"require('fs').cpSync('src/db/schema.sql', 'dist/db/schema.sql')\"",
     "start": "node dist/server.js",
-    "db:migrate": "tsx src/db/migrate.ts",
-    "db:seed": "tsx src/db/seed.ts",
-    "db:seed-demo": "tsx src/db/seed-demo.ts",
-    "db:setup": "tsx src/db/migrate.ts && tsx src/db/seed-demo.ts"
+    "db:migrate": "npx tsx src/db/migrate.ts",
+    "db:migrate:prod": "node dist/db/migrate.js",
+    "db:seed": "npx tsx src/db/seed.ts",
+    "db:seed-demo": "npx tsx src/db/seed-demo.ts",
+    "db:setup": "npx tsx src/db/migrate.ts && npx tsx src/db/seed-demo.ts"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
