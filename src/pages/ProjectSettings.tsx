@@ -18,27 +18,35 @@ import { ArrowLeft, Plus, Loader2, Users, Shield, Trash2, UserPlus, Mail, Pencil
 
 interface Member {
   id: string;
-  membership_id?: string;
-  email: string;
-  full_name: string;
-  avatar_url?: string;
-  job_title?: string;
+  membershipId?: string;
+  userId?: string;
   role: string;
-  project_role_id?: string;
-  project_role_name?: string;
-  joined_at: string;
+  projectRoleId?: string;
+  joinedAt?: string;
+  user?: {
+    id: string;
+    email?: string;
+    fullName?: string;
+    avatarUrl?: string;
+    jobTitle?: string;
+  };
+  projectRole?: {
+    id: string;
+    name: string;
+    description?: string;
+  };
 }
 
 interface ProjectRole {
   id: string;
   name: string;
   description?: string;
-  permission_level: string;
-  can_manage_members: boolean;
-  can_manage_roles: boolean;
-  can_assign_tasks: boolean;
-  can_delete_tasks: boolean;
-  can_manage_project: boolean;
+  permissionLevel: string;
+  canManageMembers: boolean;
+  canManageRoles: boolean;
+  canAssignTasks: boolean;
+  canDeleteTasks: boolean;
+  canManageProject: boolean;
 }
 
 const ProjectSettings = () => {
@@ -215,17 +223,17 @@ const ProjectSettings = () => {
     }
   };
 
-  const handleOpenEditRole = (role: any) => {
+  const handleOpenEditRole = (role: ProjectRole) => {
     setEditingRoleId(role.id);
     setEditRole({
       name: role.name || "",
       description: role.description || "",
-      permissionLevel: (role.permission_level as any) || "edit",
-      canManageMembers: !!role.can_manage_members,
-      canManageRoles: !!role.can_manage_roles,
-      canAssignTasks: !!role.can_assign_tasks,
-      canDeleteTasks: !!role.can_delete_tasks,
-      canManageProject: !!role.can_manage_project,
+      permissionLevel: (role.permissionLevel as any) || "edit",
+      canManageMembers: !!role.canManageMembers,
+      canManageRoles: !!role.canManageRoles,
+      canAssignTasks: !!role.canAssignTasks,
+      canDeleteTasks: !!role.canDeleteTasks,
+      canManageProject: !!role.canManageProject,
     });
     setEditRoleDialogOpen(true);
   };
@@ -400,48 +408,57 @@ const ProjectSettings = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {members.map((member) => (
-                  <div
-                    key={member.id}
-                    className="flex items-center justify-between p-4 border rounded-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarImage src={member.avatar_url} />
-                        <AvatarFallback>{getInitials(member.full_name || member.email)}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-medium">{member.full_name || "No name"}</div>
-                        <div className="text-sm text-muted-foreground flex items-center gap-2">
-                          <Mail className="h-3 w-3" />
-                          {member.email}
-                        </div>
-                        {member.job_title && (
-                          <div className="text-sm text-muted-foreground">
-                            {member.job_title}
+                {members.map((member) => {
+                  const user = member.user || member;
+                  const fullName = (user as any).fullName || (user as any).full_name || '';
+                  const email = (user as any).email || '';
+                  const avatarUrl = (user as any).avatarUrl || (user as any).avatar_url;
+                  const jobTitle = (user as any).jobTitle || (user as any).job_title;
+                  const projectRoleName = member.projectRole?.name;
+                  const membershipId = member.id;
+                  return (
+                    <div
+                      key={member.id}
+                      className="flex items-center justify-between p-4 border rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Avatar>
+                          <AvatarImage src={avatarUrl} />
+                          <AvatarFallback>{getInitials(fullName || email)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium">{fullName || "No name"}</div>
+                          <div className="text-sm text-muted-foreground flex items-center gap-2">
+                            <Mail className="h-3 w-3" />
+                            {email}
                           </div>
+                          {jobTitle && (
+                            <div className="text-sm text-muted-foreground">
+                              {jobTitle}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className={getRoleBadgeColor(member.role)}>
+                          {member.role}
+                        </Badge>
+                        {projectRoleName && (
+                          <Badge variant="outline">{projectRoleName}</Badge>
+                        )}
+                        {member.role !== "owner" && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveMember(membershipId)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge className={getRoleBadgeColor(member.role)}>
-                        {member.role}
-                      </Badge>
-                      {member.project_role_name && (
-                        <Badge variant="outline">{member.project_role_name}</Badge>
-                      )}
-                      {member.role !== "owner" && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleRemoveMember(member.membership_id!)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -612,7 +629,7 @@ const ProjectSettings = () => {
                       key={role.id}
                       className="p-4 border rounded-lg space-y-2"
                     >
-                      <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between">
                         <div>
                           <div className="font-semibold text-lg">{role.name}</div>
                           {role.description && (
@@ -620,7 +637,7 @@ const ProjectSettings = () => {
                           )}
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge>{role.permission_level}</Badge>
+                          <Badge>{role.permissionLevel}</Badge>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -639,19 +656,19 @@ const ProjectSettings = () => {
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-2 pt-2">
-                        {role.can_manage_members && (
+                        {role.canManageMembers && (
                           <Badge variant="secondary">Manage Members</Badge>
                         )}
-                        {role.can_manage_roles && (
+                        {role.canManageRoles && (
                           <Badge variant="secondary">Manage Roles</Badge>
                         )}
-                        {role.can_assign_tasks && (
+                        {role.canAssignTasks && (
                           <Badge variant="secondary">Assign Tasks</Badge>
                         )}
-                        {role.can_delete_tasks && (
+                        {role.canDeleteTasks && (
                           <Badge variant="secondary">Delete Tasks</Badge>
                         )}
-                        {role.can_manage_project && (
+                        {role.canManageProject && (
                           <Badge variant="secondary">Manage Project</Badge>
                         )}
                       </div>

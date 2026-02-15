@@ -9,8 +9,8 @@ interface Task {
   title: string;
   description: string | null;
   priority: "low" | "medium" | "high" | "urgent" | null;
-  due_date: string | null;
-  assigned_to: string | null;
+  dueDate: string | null;
+  assignedTo: string | null;
 }
 
 interface TaskCardProps {
@@ -27,7 +27,7 @@ const priorityColors = {
 };
 
 const TaskCard = ({ task, index, onClick }: TaskCardProps) => {
-  const isOverdue = task.due_date && new Date(task.due_date) < new Date();
+  const isOverdue = task.dueDate && new Date(task.dueDate) < new Date();
   
   return (
     <Draggable draggableId={task.id} index={index}>
@@ -60,13 +60,13 @@ const TaskCard = ({ task, index, onClick }: TaskCardProps) => {
             </CardHeader>
             {(task.description || task.due_date) && (
               <CardContent className="p-3 pt-0 space-y-2">
-                {task.description && (
+              {task.description && (
                   <p className="text-xs text-muted-foreground line-clamp-2">
                     {task.description}
                   </p>
                 )}
                 <div className="flex items-center gap-2 text-xs">
-                  {task.due_date && (
+                  {task.dueDate && (
                     <div 
                       className={`flex items-center gap-1 px-2 py-1 rounded-md ${
                         isOverdue 
@@ -75,7 +75,7 @@ const TaskCard = ({ task, index, onClick }: TaskCardProps) => {
                       }`}
                     >
                       <Calendar className="h-3 w-3" />
-                      <span>{format(new Date(task.due_date), "MMM d")}</span>
+                      <span>{format(new Date(task.dueDate), "MMM d")}</span>
                     </div>
                   )}
                 </div>

@@ -17,10 +17,10 @@ interface Project {
   id: string;
   name: string;
   description: string;
-  created_at: string;
-  owner_id: string;
-  owner_name?: string;
-  member_count?: number;
+  createdAt: string;
+  ownerId: string;
+  ownerName?: string;
+  memberCount?: number;
 }
 
 const Projects = () => {
@@ -221,7 +221,7 @@ const Projects = () => {
                   <div className="bg-primary/10 rounded-lg p-2 mb-3">
                     <FolderKanban className="h-6 w-6 text-primary" />
                   </div>
-                  {user?.id === project.owner_id && (
+                  {user?.id === project.ownerId && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                         <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
@@ -255,7 +255,7 @@ const Projects = () => {
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
-                    <span>{format(new Date(project.created_at), "MMM d, yyyy")}</span>
+                    <span>{format(new Date(project.createdAt), "MMM d, yyyy")}</span>
                   </div>
                 </div>
               </CardContent>

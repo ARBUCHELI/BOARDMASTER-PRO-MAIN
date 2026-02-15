@@ -15,17 +15,17 @@ interface Task {
   description: string | null;
   priority: "low" | "medium" | "high" | "urgent";
   status: "todo" | "in_progress" | "done";
-  board_id: string;
+  boardId: string;
   position: number;
-  due_date: string | null;
-  assigned_to: string | null;
+  dueDate: string | null;
+  assignedTo: string | null;
 }
 
 interface Board {
   id: string;
   name: string;
   position: number;
-  project_id: string;
+  projectId: string;
 }
 
 interface Project {
@@ -101,7 +101,7 @@ const ProjectBoard = () => {
 
     const updatedTask = {
       ...task,
-      board_id: destination.droppableId,
+      boardId: destination.droppableId,
       position: destination.index,
     };
 
@@ -131,7 +131,7 @@ const ProjectBoard = () => {
 
   const handleTaskClick = (task: Task) => {
     setSelectedTask(task);
-    setSelectedBoardId(task.board_id);
+    setSelectedBoardId(task.boardId);
     setDialogOpen(true);
   };
 
@@ -144,9 +144,9 @@ const ProjectBoard = () => {
           title: taskData.title,
           description: taskData.description,
           priority: taskData.priority,
-          dueDate: taskData.due_date?.toISOString() || null,
+          dueDate: taskData.dueDate?.toISOString() || null,
           status: taskData.status,
-          assignedTo: taskData.assigned_to,
+          assignedTo: taskData.assignedTo,
         });
 
         toast({
@@ -236,11 +236,11 @@ const ProjectBoard = () => {
 
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="flex gap-4 overflow-x-auto pb-6 px-1">
-            {boards.map((board) => (
+              {boards.map((board) => (
               <BoardColumn
                 key={board.id}
                 board={board}
-                tasks={tasks.filter((t) => t.board_id === board.id)}
+                tasks={tasks.filter((t) => t.boardId === board.id)}
                 onAddTask={handleAddTask}
                 onTaskClick={handleTaskClick}
               />
@@ -259,9 +259,9 @@ const ProjectBoard = () => {
                 title: selectedTask.title,
                 description: selectedTask.description || "",
                 priority: selectedTask.priority,
-                due_date: selectedTask.due_date ? new Date(selectedTask.due_date) : null,
+                dueDate: selectedTask.dueDate ? new Date(selectedTask.dueDate) : null,
                 status: selectedTask.status,
-                assigned_to: selectedTask.assigned_to,
+                assignedTo: selectedTask.assignedTo,
               }
             : undefined
         }

@@ -17,16 +17,23 @@ interface Task {
   title: string;
   description: string;
   priority: "low" | "medium" | "high" | "urgent";
-  due_date: Date | null;
+  dueDate: Date | null;
   status: "todo" | "in_progress" | "done";
-  assigned_to?: string | null;
+  assignedTo?: string | null;
 }
 
 interface Member {
   id: string;
-  full_name: string;
-  email: string;
-  avatar_url?: string;
+  userId?: string;
+  fullName?: string;
+  email?: string;
+  avatarUrl?: string;
+  user?: {
+    id: string;
+    fullName?: string;
+    email?: string;
+    avatarUrl?: string;
+  };
 }
 
 interface TaskDialogProps {
@@ -44,9 +51,9 @@ const TaskDialog = ({ open, onOpenChange, task, onSave, onDelete, boardId, proje
     title: "",
     description: "",
     priority: "medium",
-    due_date: null,
+    dueDate: null,
     status: "todo",
-    assigned_to: null,
+    assignedTo: null,
   });
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -55,16 +62,16 @@ const TaskDialog = ({ open, onOpenChange, task, onSave, onDelete, boardId, proje
     if (task) {
       setFormData({
         ...task,
-        due_date: task.due_date ? new Date(task.due_date) : null,
+        dueDate: task.dueDate ? new Date(task.dueDate) : null,
       });
     } else {
       setFormData({
         title: "",
         description: "",
         priority: "medium",
-        due_date: null,
+        dueDate: null,
         status: "todo",
-        assigned_to: null,
+        assignedTo: null,
       });
     }
   }, [task, open]);
@@ -132,8 +139,8 @@ const TaskDialog = ({ open, onOpenChange, task, onSave, onDelete, boardId, proje
                 Assign To
               </Label>
               <Select
-                value={formData.assigned_to || "unassigned"}
-                onValueChange={(value) => setFormData({ ...formData, assigned_to: value === "unassigned" ? null : value })}
+                value={formData.assignedTo || "unassigned"}
+                onValueChange={(value) => setFormData({ ...formData, assignedTo: value === "unassigned" ? null : value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select team member" />
@@ -147,19 +154,25 @@ const TaskDialog = ({ open, onOpenChange, task, onSave, onDelete, boardId, proje
                       <span>Unassigned</span>
                     </div>
                   </SelectItem>
-                  {projectMembers.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-6 w-6">
-                          <AvatarImage src={member.avatar_url} />
-                          <AvatarFallback className="text-xs">
-                            {member.full_name?.[0] || member.email[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span>{member.full_name || member.email}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
+                  {projectMembers.map((member) => {
+                    const user = member.user || member;
+                    const memberId = member.userId || user.id;
+                    const name = user.fullName || user.email || 'Unknown';
+                    const avatar = user.avatarUrl;
+                    return (
+                      <SelectItem key={memberId} value={memberId}>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={avatar} />
+                            <AvatarFallback className="text-xs">
+                              {name[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span>{name}</span>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
@@ -191,18 +204,18 @@ const TaskDialog = ({ open, onOpenChange, task, onSave, onDelete, boardId, proje
                       variant="outline"
                       className={cn(
                         "w-full justify-start text-left font-normal",
-                        !formData.due_date && "text-muted-foreground"
+                        !formData.dueDate && "text-muted-foreground"
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.due_date ? format(formData.due_date, "PPP") : "Pick a date"}
+                      {formData.dueDate ? format(formData.dueDate, "PPP") : "Pick a date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
                       mode="single"
-                      selected={formData.due_date || undefined}
-                      onSelect={(date) => setFormData({ ...formData, due_date: date || null })}
+                      selected={formData.dueDate || undefined}
+                      onSelect={(date) => setFormData({ ...formData, dueDate: date || null })}
                       initialFocus
                     />
                   </PopoverContent>

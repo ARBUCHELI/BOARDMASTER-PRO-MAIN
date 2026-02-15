@@ -9,8 +9,8 @@ interface Task {
   title: string;
   description: string | null;
   priority: "low" | "medium" | "high" | "urgent" | null;
-  due_date: string | null;
-  assigned_to: string | null;
+  dueDate: string | null;
+  assignedTo: string | null;
 }
 
 interface Board {
