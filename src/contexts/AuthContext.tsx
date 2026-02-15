@@ -1,8 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { api } from "@/lib/api";
-import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 interface User {
   id: string;
@@ -25,67 +23,29 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Helper to fetch profile data
-const fetchProfile = async (supabaseUser: SupabaseUser): Promise<User> => {
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', supabaseUser.id)
-    .single();
-
-  return {
-    id: supabaseUser.id,
-    email: supabaseUser.email || '',
-    fullName: profile?.full_name || '',
-    avatarUrl: profile?.avatar_url || undefined,
-    bio: profile?.bio || undefined,
-    jobTitle: profile?.job_title || undefined,
-  };
-};
-
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check for existing session
+    // Check for existing session via stored token
     const initAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user) {
-          const userData = await fetchProfile(session.user);
+        if (api.isAuthenticated()) {
+          const userData = await api.getMe();
           setUser(userData);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
+        // Token might be invalid/expired, clear it
+        await api.logout();
       } finally {
         setLoading(false);
       }
     };
 
     initAuth();
-
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        try {
-          if (event === 'SIGNED_IN' && session?.user) {
-            const userData = await fetchProfile(session.user);
-            setUser(userData);
-          } else if (event === 'SIGNED_OUT') {
-            setUser(null);
-          }
-        } catch (error) {
-          console.error('Auth state change error:', error);
-        }
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
@@ -102,14 +62,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      console.log('[Auth] signIn called');
       const response = await api.login(email, password);
-      console.log('[Auth] api.login response:', response);
       if (response?.user) {
-        console.log('[Auth] Setting user:', response.user);
         setUser(response.user);
-      } else {
-        console.log('[Auth] No user in response');
       }
       return { error: null };
     } catch (error: any) {
